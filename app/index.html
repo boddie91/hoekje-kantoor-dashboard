@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Hoekje kantoor</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; media-src *; img-src * data:">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar" aria-label="Onderdelen" id="sidebar"></nav>
+  <div class="main">
+    <header class="topbar">
+      <h1 id="title">Overzicht</h1>
+      <div class="row">
+        <span class="update" id="updateBar" role="status" hidden>
+          Er is een nieuwe versie van het dashboard
+          <button class="btn primary" id="restartBtn">Opnieuw starten</button>
+        </span>
+        <span class="hint" id="topHint">Meldingen van websites in het dashboard staan uit</span>
+      </div>
+    </header>
+
+    <!-- OVERZICHT -->
+    <section class="view active" id="view-overzicht" aria-label="Overzicht">
+      <div class="grid">
+        <section class="panel exact" aria-label="Exact Online">
+          <div class="panel-head">
+            <h2>Exact Online</h2>
+            <div class="row">
+              <button class="btn dark" id="splitBtn" aria-pressed="true">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>
+                Gesplitst scherm
+              </button>
+              <button class="icon" id="exactFull" aria-label="Exact Online groot openen" title="Groot openen">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-7 7"/><path d="M10 20H4v-6"/><path d="M4 20l7-7"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="split" id="exactSplit">
+            <div class="pane" id="exactLeft"></div>
+            <div class="gutter inner" id="splitGutter" role="separator" aria-orientation="vertical" aria-label="Verdeling linker- en rechterhelft Exact aanpassen" tabindex="0" title="Sleep om de verdeling aan te passen (dubbelklik: half-half)"></div>
+            <div class="pane" id="exactRight"></div>
+          </div>
+        </section>
+
+        <div class="gutter" data-gutter="0" role="separator" aria-orientation="vertical" aria-label="Breedte Exact en Outlook aanpassen" tabindex="0" title="Sleep om de breedte aan te passen (dubbelklik: standaard)"></div>
+
+        <section class="panel" aria-label="Outlook">
+          <div class="panel-head"><h2>Outlook</h2></div>
+          <div class="pane" id="outlookMini"></div>
+        </section>
+
+        <div class="gutter" data-gutter="1" role="separator" aria-orientation="vertical" aria-label="Breedte Outlook en rechterkolom aanpassen" tabindex="0" title="Sleep om de breedte aan te passen (dubbelklik: standaard)"></div>
+
+        <div class="col">
+          <section class="panel calc" aria-label="Rekenmachine">
+            <h2>Rekenmachine</h2>
+            <output id="calcOut" aria-live="polite">0</output>
+            <div class="keys" id="calcKeys"></div>
+          </section>
+
+          <section class="panel grow" aria-label="Grootboek Sorteerder">
+            <div class="panel-head">
+              <h2>Grootboek Sorteerder</h2>
+              <button class="icon" id="gbFull" aria-label="Grootboek Sorteerder groot openen" title="Groot openen">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-7 7"/><path d="M10 20H4v-6"/><path d="M4 20l7-7"/></svg>
+              </button>
+            </div>
+            <div class="pane" id="gbMini"></div>
+          </section>
+
+          <section class="panel music" aria-label="Muziek">
+            <h2>Muziek</h2>
+            <div class="row">
+              <button class="play" id="playBtn" aria-label="Afspelen">
+                <svg aria-hidden="true" viewBox="0 0 24 24" id="playIcon"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>
+              </button>
+              <button class="chip" data-src="radio2" aria-pressed="true">Radio 2</button>
+              <button class="chip" data-src="focus" aria-pressed="false">Focus-muziek</button>
+            </div>
+            <div class="row">
+              <label for="vol" class="small">Volume</label>
+              <input id="vol" type="range" min="0" max="100" value="40">
+            </div>
+            <p class="small err" id="musicMsg" hidden></p>
+            <audio id="audio" preload="none"></audio>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSTELLINGEN -->
+    <section class="view scroll" id="view-instellingen" aria-label="Instellingen">
+      <div class="settings">
+        <p class="saved">Wijzigingen worden meteen bewaard</p>
+
+        <section class="card">
+          <h2>Website-tabbladen in de zijbalk</h2>
+          <p class="small">Elk tabblad opent automatisch het webadres dat je hier invult. Met de pijltjes bepaal je de volgorde.</p>
+          <ul id="tabList" class="tablist"></ul>
+          <button class="btn dashed" id="addTab">+ Website toevoegen</button>
+        </section>
+
+        <section class="card">
+          <h2>Exact Online op het overzicht</h2>
+          <div class="fields">
+            <label>Startpagina linkerhelft<input data-key="exactLeft" type="url"></label>
+            <label>Startpagina rechterhelft<input data-key="exactRight" type="url"></label>
+          </div>
+          <label class="check"><input data-key="exactSplit" type="checkbox"> Openen in gesplitst scherm</label>
+        </section>
+
+        <section class="card">
+          <h2>Overige webadressen</h2>
+          <div class="fields">
+            <label>Outlook<input data-key="outlook" type="url"></label>
+            <label>Grootboek Sorteerder<input data-key="grootboek" type="url"></label>
+            <label>Startpagina van de browser<input data-key="browserHome" type="url"></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Muziek</h2>
+          <p class="small">Vul het adres van een geluidsstream in (geen gewone webpagina).</p>
+          <div class="fields">
+            <label>Radio 2<input data-key="radio2" type="url"></label>
+            <label>Focus-muziek<input data-key="focus" type="url" placeholder="Adres van een stream met focus-muziek"></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Gegevens</h2>
+          <p class="small">Inloggegevens van websites bewaart het dashboard niet zelf; die blijven bij de websites, zoals in een gewone browser.</p>
+          <button class="btn" id="resetBtn">Instellingen terugzetten naar standaard</button>
+        </section>
+        <section class="card">
+          <h2>Bijwerken</h2>
+          <p class="small">Het dashboard zoekt bij het opstarten en elke drie uur zelf naar verbeteringen. Is er iets nieuws, dan verschijnt bovenaan een knop om opnieuw te starten.</p>
+          <div class="row"><button class="btn" id="checkBtn">Nu zoeken naar updates</button><span class="small" id="checkMsg" role="status"></span></div>
+          <p class="small">Versie <span id="ver"></span></p>
+        </section>
+      </div>
+    </section>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
