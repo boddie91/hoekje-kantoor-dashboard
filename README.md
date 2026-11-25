@@ -42,7 +42,7 @@ Ontwerp (alle schermen, ook wat nog gebouwd moet worden): https://claude.ai/arti
 4. Vanuit de sandbox is de app nooit echt gestart: wees eerlijk over wat getest is en vraag de gebruiker om te testen.
    Bij problemen: vraag toegang tot `%LOCALAPPDATA%\HoekjeKantoor` en lees `app-log.txt`.
 
-## Gebouwd (v0.6)
+## Gebouwd (v0.7)
 Zijbalk, Exact Online met gesplitst scherm, Outlook, Grootboek Sorteerder (https://boddie91.github.io/grootboek-sorteerder/),
 rekenmachine, Radio 2/focus-muziek, website-tabbladen (Rabobank, Mijn KPN, Exact, Dropbox, Kassa), instellingenpagina,
 versleepbare tegelbreedtes, automatisch bijwerken.
@@ -71,5 +71,14 @@ Outlook wordt gedownload gaat via `window.grootboekLaadPdf` naar de Grootboek So
 Elke 5 minuten leest het dashboard `localStorage['grootboek-sorteerder-leveranciers']` uit de Grootboek-webview en schrijft
 die (bij wijziging) naar `<Dropbox>/Hoekje kantoor/Grootboek boekingsregels/` (`boekingsregels-laatste.json` + één per dag,
 90 dagen). Dropbox-map uit `%LOCALAPPDATA%\Dropbox\info.json`. Formaat = de handmatige back-up van de Grootboek Sorteerder.
+
+**Microsoft-koppeling (v0.7)**: Microsoft Graph met eigen app-registratie van de gebruiker (alleen persoonlijke
+Microsoft-accounts, platform "Openbare client", redirect `https://login.microsoftonline.com/common/oauth2/nativeclient`,
+gedelegeerde rechten `Mail.Read`, `User.Read`, `offline_access`). Client-id staat in de instellingen (`msClientId`, niet geheim).
+PKCE-inlog in een modaal venster; vernieuwingssleutel versleuteld (safeStorage) in `%LOCALAPPDATA%\HoekjeKantoor\microsoft.bin`.
+`mail-facturen` zoekt mails met bijlagen van de laatste `mailDagen` dagen (max. 300 mails), downloadt pdf-bijlagen naar
+`%LOCALAPPDATA%\HoekjeKantoor\mail-pdf\`; Betalen slaat incasso's, al betaalde en niet-herkende pdf's over en onthoudt
+verwerkte bijlagen (`verwerkt`). Zoekt vanzelf hooguit eens per uur bij het openen van Betalen.
+Voor concept-mails (ontbrekende facturen opvragen) is later `Mail.ReadWrite` nodig: opnieuw koppelen.
 
 Apart project, later: betaalverzoeken aan debiteuren uit de kassa (MplusKASSA) via WhatsApp met één betaallink.

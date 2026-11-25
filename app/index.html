@@ -96,7 +96,10 @@
         <section class="card" aria-labelledby="h-bet-in">
           <div class="row between">
             <h2 id="h-bet-in">Facturen toevoegen</h2>
+            <div class="row">
+            <button class="btn primary" id="betMail">Zoek facturen in mijn mail</button>
             <label class="btn small-btn">Rabobank-CSV inlezen<input type="file" id="betCsv" accept=".csv" hidden></label>
+            </div>
           </div>
           <div class="bet-in">
             <div class="drop" id="betDrop">
@@ -168,6 +171,16 @@
             <label>Startpagina rechterhelft<input data-key="exactRight" type="url"></label>
           </div>
           <label class="check"><input data-key="exactSplit" type="checkbox"> Openen in gesplitst scherm</label>
+        </section>
+
+        <section class="card">
+          <h2>Microsoft-koppeling (mail)</h2>
+          <p class="small">Hiermee zoekt het dashboard zelf naar factuur-pdf's in je mailbox. Het dashboard kan je mail alleen lezen, niet versturen of wijzigen.</p>
+          <div class="fields">
+            <label>Toepassings-id (client-id) van Microsoft<input data-key="msClientId" type="text" placeholder="00000000-0000-0000-0000-000000000000"></label>
+            <label>Zoeken in mails van de laatste … dagen<input data-key="mailDagen" type="number" min="1" max="120"></label>
+          </div>
+          <div class="row"><button class="btn primary" id="msKoppel">Koppelen met Microsoft</button><button class="btn" id="msOntkoppel" hidden>Ontkoppelen</button><span class="small" id="msStatus" role="status"></span></div>
         </section>
 
         <section class="card">

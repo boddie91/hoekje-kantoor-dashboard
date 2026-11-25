@@ -22,6 +22,8 @@ const DEFAULTS = {
   volume: 40,
   cols: [3, 2, 1.3],
   gbAuto: true,
+  msClientId: '',
+  mailDagen: 30,
   betaalNaam: '',
   betaalIban: '',
   betaalBic: 'RABONL2U',
@@ -485,6 +487,21 @@ function initSettings() {
     S = structuredClone(DEFAULTS); save(); location.reload();
   };
   const api = window.hoekje;
+  if (api && api.msStatus) {
+    const toon = async () => {
+      const st = await api.msStatus();
+      $('#msStatus').textContent = st.gekoppeld ? 'Gekoppeld' + (st.email ? ' met ' + st.email : '') : 'Niet gekoppeld';
+      $('#msOntkoppel').hidden = !st.gekoppeld;
+      $('#msKoppel').textContent = st.gekoppeld ? 'Opnieuw koppelen' : 'Koppelen met Microsoft';
+    };
+    toon();
+    $('#msKoppel').onclick = async () => {
+      $('#msStatus').textContent = 'Log in bij Microsoft in het venster dat opent…';
+      const r = await api.msKoppel(S.msClientId);
+      if (r.fout) $('#msStatus').textContent = r.fout; else toon();
+    };
+    $('#msOntkoppel').onclick = async () => { await api.msOntkoppel(); toon(); };
+  }
   if (api && api.toonReservekopie) {
     $('#kopieStatus').textContent = S.kopieStatus || 'Nog geen reservekopie gemaakt.';
     $('#kopieToon').onclick = () => api.toonReservekopie();

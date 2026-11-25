@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, shell, ipcMain, net, dialog, nativeImage } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain, net, dialog, nativeImage, safeStorage } = require('electron');
 const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
@@ -149,6 +149,122 @@ ipcMain.on('open-bestand', (e, p) => { if (isPdf(p)) shell.openPath(p); });
 ipcMain.on('sleep-bestand', (e, p) => {
   if (!isOwnFile(p)) return;
   e.sender.startDrag({ file: p, icon: nativeImage.createFromPath(path.join(__dirname, 'icon.ico')).resize({ width: 32, height: 32 }) });
+});
+
+/* ---------- Microsoft-koppeling: facturen uit de mailbox (Microsoft Graph) ----------
+   Inloggen met PKCE (geen geheim nodig). Alleen leesrechten op mail (Mail.Read).
+   De vernieuwingssleutel wordt versleuteld met Windows (safeStorage) bewaard. */
+const MS_FILE = path.join(DATADIR, 'microsoft.bin');
+const MS_REDIRECT = 'https://login.microsoftonline.com/common/oauth2/nativeclient';
+const MS_SCOPE = 'offline_access User.Read Mail.Read';
+const MS_AUTH = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
+let ms = { clientId: '', refresh: '', access: '', verloopt: 0, email: '' };
+function msLaad() {
+  try {
+    const buf = fs.readFileSync(MS_FILE);
+    const j = JSON.parse(safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(buf) : buf.toString('utf8'));
+    ms = Object.assign(ms, j, { access: '', verloopt: 0 });
+  } catch (e) {}
+}
+function msBewaar() {
+  const j = JSON.stringify({ clientId: ms.clientId, refresh: ms.refresh, email: ms.email });
+  try { fs.writeFileSync(MS_FILE, safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(j) : Buffer.from(j)); } catch (e) { log('microsoft: bewaren mislukt', e.message); }
+}
+async function msToken(params) {
+  const body = new URLSearchParams(Object.assign({ client_id: ms.clientId, scope: MS_SCOPE }, params));
+  const r = await net.fetch(MS_AUTH + '/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error_description ? String(j.error_description).split('\r')[0] : 'Inloggen bij Microsoft mislukt (' + r.status + ')');
+  ms.access = j.access_token;
+  ms.verloopt = Date.now() + (j.expires_in || 3600) * 1000 - 60000;
+  if (j.refresh_token) ms.refresh = j.refresh_token;
+  msBewaar();
+}
+async function msAccess() {
+  if (ms.access && Date.now() < ms.verloopt) return ms.access;
+  if (!ms.refresh) throw new Error('Niet gekoppeld met Microsoft.');
+  await msToken({ grant_type: 'refresh_token', refresh_token: ms.refresh });
+  return ms.access;
+}
+async function graph(pad, opts = {}) {
+  const url = pad.startsWith('https://') ? pad : 'https://graph.microsoft.com/v1.0' + pad;
+  const r = await net.fetch(url, { headers: { Authorization: 'Bearer ' + (await msAccess()) } });
+  if (!r.ok) throw new Error('Microsoft gaf een fout (' + r.status + ')');
+  return opts.bytes ? Buffer.from(await r.arrayBuffer()) : r.json();
+}
+function msInloggen(clientId) {
+  return new Promise((resolve) => {
+    ms.clientId = String(clientId || '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(ms.clientId)) return resolve({ fout: 'De toepassings-id klopt niet. Het is een code van 36 tekens met streepjes.' });
+    const verifier = crypto.randomBytes(48).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    const state = crypto.randomBytes(12).toString('hex');
+    const url = MS_AUTH + '/authorize?' + new URLSearchParams({
+      client_id: ms.clientId, response_type: 'code', redirect_uri: MS_REDIRECT, response_mode: 'query',
+      scope: MS_SCOPE, code_challenge: challenge, code_challenge_method: 'S256', state, prompt: 'select_account',
+    });
+    const w = new BrowserWindow({ width: 520, height: 720, parent: win, modal: true, title: 'Koppelen met Microsoft', autoHideMenuBar: true, webPreferences: { partition: PARTITION } });
+    let klaar = false;
+    const check = async (e, u) => {
+      u = (e && e.url) || u || '';
+      if (klaar || !String(u).startsWith(MS_REDIRECT)) return;
+      klaar = true;
+      if (e && e.preventDefault) e.preventDefault();
+      const q = new URL(u).searchParams;
+      w.close();
+      if (q.get('error')) return resolve({ fout: q.get('error_description') || 'Koppelen geannuleerd.' });
+      if (q.get('state') !== state) return resolve({ fout: 'Koppelen mislukt (controle).' });
+      try {
+        await msToken({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: MS_REDIRECT, code_verifier: verifier });
+        const me = await graph('/me?$select=mail,userPrincipalName');
+        ms.email = me.mail || me.userPrincipalName || '';
+        msBewaar();
+        log('microsoft: gekoppeld');
+        resolve({ email: ms.email });
+      } catch (err) { resolve({ fout: err.message }); }
+    };
+    w.webContents.on('will-redirect', check);
+    w.webContents.on('will-navigate', check);
+    w.webContents.on('did-redirect-navigation', (e, u) => check(e, u));
+    w.webContents.on('did-navigate', (e, u) => check(null, u));
+    w.on('closed', () => { if (!klaar) resolve({ fout: 'Koppelen geannuleerd.' }); });
+    w.loadURL(url);
+  });
+}
+ipcMain.handle('ms-status', () => { msLaad(); return { gekoppeld: !!ms.refresh, email: ms.email, clientId: ms.clientId }; });
+ipcMain.handle('ms-koppel', (e, clientId) => msInloggen(clientId));
+ipcMain.handle('ms-ontkoppel', () => { ms = { clientId: ms.clientId, refresh: '', access: '', verloopt: 0, email: '' }; msBewaar(); return true; });
+
+const MAILPDF = path.join(DATADIR, 'mail-pdf');
+ipcMain.handle('mail-facturen', async (e, dagen) => {
+  try {
+    msLaad();
+    fs.mkdirSync(MAILPDF, { recursive: true });
+    const sinds = new Date(Date.now() - Math.max(1, Math.min(120, +dagen || 30)) * 864e5).toISOString();
+    let url = '/me/messages?' + new URLSearchParams({
+      $filter: `receivedDateTime ge ${sinds} and hasAttachments eq true`,
+      $orderby: 'receivedDateTime desc', $select: 'id,subject,from,receivedDateTime', $top: '50',
+    });
+    const mails = [];
+    for (let p = 0; url && p < 6; p++) { const j = await graph(url); mails.push(...(j.value || [])); url = j['@odata.nextLink']; }
+    const uit = [];
+    for (const m of mails) {
+      const atts = await graph(`/me/messages/${m.id}/attachments?$select=id,name,contentType,size`);
+      for (const a of atts.value || []) {
+        if (a['@odata.type'] !== '#microsoft.graph.fileAttachment' || !(/pdf/i.test(a.contentType || '') || /\.pdf$/i.test(a.name || ''))) continue;
+        const sleutel = crypto.createHash('sha1').update(m.id + '|' + a.id).digest('hex').slice(0, 16);
+        const naam = (a.name || 'factuur.pdf').replace(/[\\/:*?"<>|]/g, '_');
+        const pad = path.join(MAILPDF, sleutel + '-' + naam);
+        if (!fs.existsSync(pad)) fs.writeFileSync(pad, await graph(`/me/messages/${m.id}/attachments/${a.id}/$value`, { bytes: true }));
+        uit.push({ pad, naam, sleutel, van: (m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || '', vanAdres: (m.from && m.from.emailAddress && m.from.emailAddress.address) || '', onderwerp: m.subject || '', datum: m.receivedDateTime });
+      }
+    }
+    log('microsoft: mails bekeken', mails.length, 'pdf-bijlagen', uit.length);
+    return { bijlagen: uit, mails: mails.length };
+  } catch (err) {
+    log('microsoft: fout', err.message);
+    return { fout: err.message };
+  }
 });
 
 /* ---------- Reservekopie van de boekingsregels in Dropbox ---------- */

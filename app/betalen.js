@@ -6,8 +6,8 @@ const BET_STORE = 'hoekje-kantoor-betalen';
 const api = window.hoekje;
 
 function betLoad() {
-  try { return Object.assign({ rijen: [], bekend: {}, betaald: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
-  catch (e) { return { rijen: [], bekend: {}, betaald: {} }; }
+  try { return Object.assign({ rijen: [], bekend: {}, betaald: {}, verwerkt: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
+  catch (e) { return { rijen: [], bekend: {}, betaald: {}, verwerkt: {} }; }
 }
 let B = betLoad();
 function betSave() { try { localStorage.setItem(BET_STORE, JSON.stringify(B)); } catch (e) {} }
@@ -160,15 +160,29 @@ function ibanStatus(r) {
 }
 function magMee(r) { return ibanGeldig(r.iban) && Number(r.bedrag) > 0 && (r.naam || '').trim().length > 1; }
 
-async function voegToe(paden) {
+async function voegToe(paden, opties = {}) {
   const msg = $('#betMsg');
   let nieuw = 0;
-  for (const p of paden) {
+  const tel = { incasso: 0, betaald: 0, geenFactuur: 0 };
+  for (const item of paden) {
+    const p = typeof item === 'string' ? item : item.pad;
+    const meta = typeof item === 'string' ? null : item;
     if (B.rijen.some((r) => r.pad === p)) continue;
     msg.textContent = 'Bezig met lezen: ' + p.split(/[\\/]/).pop();
     const res = await api.pdfTekst(p);
     const f = res.tekst ? leesFactuur(res.tekst, S.betaalIban) : { iban: '', bedrag: 0, nummer: '', naam: '', factuurdatum: '', vervaldatum: '', termijn: 0, kenmerk: '', incasso: false };
-    const rij = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pad: p, bestand: p.split(/[\\/]/).pop(), ...f, leesfout: !!res.fout };
+    const rij = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pad: p, bestand: meta ? meta.naam : p.split(/[\\/]/).pop(), ...f, leesfout: !!res.fout };
+    if (meta) {
+      rij.mail = { van: meta.van, onderwerp: meta.onderwerp, datum: meta.datum };
+      B.verwerkt[meta.sleutel] = 1;
+      if (!rij.naam || rij.naam.length < 3) rij.naam = meta.van;
+    }
+    // Uit de mail: alleen echte, nog te betalen facturen klaarzetten.
+    if (opties.filter) {
+      if (f.incasso) { tel.incasso++; continue; }
+      if (!f.iban && !f.bedrag) { tel.geenFactuur++; continue; }
+      if (B.betaald[sleutel(rij)]) { tel.betaald++; continue; }
+    }
     if (B.bekend[ibanSchoon(rij.iban)] && !res.fout) rij.naam = B.bekend[ibanSchoon(rij.iban)];
     const d = bepaalDatum(rij);
     rij.datum = d.datum; rij.bron = d.bron; rij.telaat = d.telaat; rij.datumHandmatig = false;
@@ -176,7 +190,8 @@ async function voegToe(paden) {
     B.rijen.push(rij);
     nieuw++;
   }
-  msg.textContent = nieuw ? nieuw + (nieuw === 1 ? ' factuur' : ' facturen') + ' ingelezen. Controleer de gegevens.' : 'Geen nieuwe facturen.';
+  const extra = [tel.incasso && tel.incasso + ' incasso overgeslagen', tel.betaald && tel.betaald + ' al betaald', tel.geenFactuur && tel.geenFactuur + ' geen factuur herkend'].filter(Boolean).join(', ');
+  msg.textContent = (nieuw ? nieuw + (nieuw === 1 ? ' factuur' : ' facturen') + ' klaargezet. Controleer de gegevens.' : 'Geen nieuwe facturen.') + (extra ? ' (' + extra + ')' : '');
   betSave();
   renderBetalen();
 }
@@ -209,6 +224,7 @@ function renderBetalen() {
     const datum = el('input', { type: 'date', value: r.datum, 'aria-label': 'Uitvoerdatum' });
     datum.onchange = () => { r.datum = datum.value; r.datumHandmatig = true; r.bron = 'Zelf ingesteld'; r.telaat = false; betSave(); renderBetalen(); };
     const notes = [];
+    if (r.mail) notes.push(el('span', { class: 'tag' }, 'Uit mail van ' + r.mail.van + ' · ' + new Date(r.mail.datum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })));
     if (r.leesfout) notes.push(el('span', { class: 'tag bad' }, 'Pdf niet leesbaar – vul zelf in'));
     if (r.incasso) notes.push(el('span', { class: 'tag' }, 'Lijkt een incasso – niet aangevinkt'));
     if (dubbel) notes.push(el('span', { class: 'tag bad' }, 'Zat al in betaalbestand van ' + dubbel));
@@ -364,6 +380,26 @@ async function renderRecent() {
   }
 }
 
+/* ---------- Facturen uit de mailbox ---------- */
+async function zoekInMail(stil) {
+  const msg = $('#betMsg');
+  const knop = $('#betMail');
+  const st = await api.msStatus();
+  if (!st.gekoppeld) {
+    if (!stil) msg.textContent = 'Koppel eerst je mailbox: Instellingen › Microsoft-koppeling.';
+    return;
+  }
+  knop.disabled = true;
+  msg.textContent = 'Bezig met zoeken in je mail…';
+  const res = await api.mailFacturen(S.mailDagen || 30);
+  knop.disabled = false;
+  if (res.fout) { msg.textContent = 'Zoeken in de mail lukte niet: ' + res.fout; return; }
+  B.laatsteMailZoek = Date.now();
+  const nieuw = res.bijlagen.filter((b) => !B.verwerkt[b.sleutel]);
+  if (!nieuw.length) { msg.textContent = `${res.mails} mails met bijlagen bekeken, geen nieuwe facturen.`; betSave(); return; }
+  await voegToe(nieuw, { filter: true });
+}
+
 function initBetalen() {
   if (!api || !api.pdfTekst) return;
   const drop = $('#betDrop');
@@ -379,6 +415,7 @@ function initBetalen() {
     if (paden.length) await voegToe(paden);
     renderRecent();
   });
+  $('#betMail').onclick = () => zoekInMail(false);
   $('#betKies').onclick = async () => { const p = await api.kiesPdfs(); if (p.length) { await voegToe(p); renderRecent(); } };
   $('#betCsv').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const n = leesCsv(await f.text()); $('#betMsg').textContent = n + ' rekeningnummers van eerdere betalingen onthouden.'; e.target.value = ''; renderBetalen(); };
   $('#betMaak').onclick = maakBetaalbestand;
@@ -390,5 +427,11 @@ function initBetalen() {
   renderBetalen();
   renderKlaar();
 }
-function betalenGetoond() { if (api && api.recentePdfs) { renderBetalen(); renderRecent(); } }
+function betalenGetoond() {
+  if (!api || !api.recentePdfs) return;
+  renderBetalen();
+  renderRecent();
+  // Elk uur hooguit één keer vanzelf in de mail zoeken.
+  if (api.mailFacturen && (!B.laatsteMailZoek || Date.now() - B.laatsteMailZoek > 3600e3)) zoekInMail(true);
+}
 initBetalen();

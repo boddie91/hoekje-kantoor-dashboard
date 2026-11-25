@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('hoekje', {
   sleepBestand: (p) => ipcRenderer.send('sleep-bestand', p),
   opPdfGedownload: (cb) => ipcRenderer.on('pdf-gedownload', (e, d) => cb(d)),
   pdfBase64: (p) => ipcRenderer.invoke('pdf-base64', p),
+  msStatus: () => ipcRenderer.invoke('ms-status'),
+  msKoppel: (id) => ipcRenderer.invoke('ms-koppel', id),
+  msOntkoppel: () => ipcRenderer.invoke('ms-ontkoppel'),
+  mailFacturen: (dagen) => ipcRenderer.invoke('mail-facturen', dagen),
   reservekopie: (json) => ipcRenderer.invoke('reservekopie', json),
   toonReservekopie: () => ipcRenderer.send('toon-reservekopie'),
 });
