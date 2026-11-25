@@ -99,14 +99,18 @@ ipcMain.handle('pdf-tekst', async (e, file) => {
   try {
     const lib = await loadPdfjs();
     const data = new Uint8Array(fs.readFileSync(file));
-    const doc = await lib.getDocument({ data, isEvalSupported: false, verbosity: 0 }).promise;
-    let tekst = '';
-    for (let p = 1; p <= Math.min(doc.numPages, 4); p++) {
-      const tc = await (await doc.getPage(p)).getTextContent();
-      tekst += tc.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
+    const taak = lib.getDocument({ data, isEvalSupported: false, verbosity: 0 });
+    try {
+      const doc = await taak.promise;
+      let tekst = '';
+      for (let p = 1; p <= Math.min(doc.numPages, 4); p++) {
+        const tc = await (await doc.getPage(p)).getTextContent();
+        tekst += tc.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
+      }
+      return { tekst };
+    } finally {
+      try { await taak.destroy(); } catch (e) {}
     }
-    await doc.destroy();
-    return { tekst };
   } catch (err) {
     log('pdf: fout', path.basename(file), err.message);
     return { fout: err.message };

@@ -6,10 +6,12 @@ const BET_STORE = 'hoekje-kantoor-betalen';
 const api = window.hoekje;
 
 function betLoad() {
-  try { return Object.assign({ rijen: [], bekend: {}, betaald: {}, verwerkt: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
-  catch (e) { return { rijen: [], bekend: {}, betaald: {}, verwerkt: {} }; }
+  try { return Object.assign({ rijen: [], bekend: {}, betaald: {}, verwerkt: {}, incasso: {}, incassoPrefix: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
+  catch (e) { return { rijen: [], bekend: {}, betaald: {}, verwerkt: {}, incasso: {} }; }
 }
 let B = betLoad();
+// Eerste versie markeerde onleesbare mailbijlagen als verwerkt: één keer opnieuw laten zoeken.
+if (!B.v071) { B.verwerkt = {}; B.laatsteMailZoek = 0; B.v071 = true; }
 function betSave() { try { localStorage.setItem(BET_STORE, JSON.stringify(B)); } catch (e) {} }
 
 /* ---------- Hulpjes ---------- */
@@ -60,6 +62,22 @@ function vorigeWerkdag(d) { d = new Date(d); while (!isWerkdag(d)) d.setDate(d.g
 function volgendeWerkdag(d) { d = new Date(d); while (!isWerkdag(d)) d.setDate(d.getDate() + 1); return d; }
 function werkdagenTerug(d, n) { d = vorigeWerkdag(d); for (let i = 0; i < n; i++) { d.setDate(d.getDate() - 1); d = vorigeWerkdag(d); } return d; }
 
+/* ---------- Namen vergelijken ---------- */
+const normNaam = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\b(b\.?\s?v\.?|n\.?\s?v\.?|v\.?\s?o\.?\s?f\.?|c\.?\s?v\.?|zakelijk|nederland|groep|group|holding)\b/g, ' ').replace(/[^a-z0-9]/g, '');
+function eigenWoorden() {
+  const w = String(S.betaalNaam || '').toLowerCase().split(/[^a-z]+/).filter((x) => x.length > 3);
+  return [...new Set(['hoekje', ...w])];
+}
+// Incasso volgens het bankafschrift: rekeningnummer of naam van een incassant.
+function isIncassant(iban, tekst, nummer) {
+  if (iban && B.incasso[ibanSchoon(iban)]) return true;
+  const pre = /^([A-Z]{3,})\d{4,}/.exec(String(nummer || '').toUpperCase());
+  if (pre && B.incassoPrefix[pre[1]]) return true;
+  const plat = normNaam(tekst);
+  return Object.values(B.incasso).some((n) => { const k = normNaam(n); return k.length >= 5 && plat.includes(k); });
+}
+
 /* ---------- Factuur lezen ---------- */
 const MAANDEN = { januari: 1, februari: 2, maart: 3, april: 4, mei: 5, juni: 6, juli: 7, augustus: 8, september: 9, oktober: 10, november: 11, december: 12, jan: 1, feb: 2, mrt: 3, apr: 4, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, okt: 10, nov: 11, dec: 12 };
 const DATUM_RE = /(\d{1,2})[-./ ](\d{1,2})[-./ ](\d{2,4})|(\d{4})-(\d{2})-(\d{2})|(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december|jan|feb|mrt|apr|jun|jul|aug|sept?|okt|nov|dec)\.?\s+(\d{4})/i;
@@ -81,7 +99,7 @@ function naLabel(tekst, labels, lengte = 70) {
   }
   return null;
 }
-const BEDRAG_RE = /-?€?\s?-?\d{1,3}(?:[.\s]\d{3})*,\d{2}(?!\d)|-?€?\s?-?\d+\.\d{2}(?!\d)/g;
+const BEDRAG_RE = /-?€?\s?-?\d{1,3}(?:\.\d{3})*,\d{2}(?!\d)|-?€?\s?-?\d+\.\d{2}(?!\d)/g;
 
 function leesFactuur(tekst, eigenIban) {
   const t = tekst.replace(/ /g, ' ');
@@ -98,10 +116,18 @@ function leesFactuur(tekst, eigenIban) {
   r.ibans = ibans;
 
   // Bedrag: na een totaal-label, anders het hoogste bedrag op de factuur.
-  const labels = ['totaal\\s+te\\s+betalen', 'te\\s+betalen\\s+bedrag', 'nog\\s+te\\s+betalen', 'openstaand(?:\\s+bedrag)?', 'factuurbedrag', 'totaalbedrag', 'totaal\\s+incl(?:usief|\\.)?\\s*(?:btw)?', 'te\\s+voldoen', 'te\\s+betalen', 'totaal\\s+eur', 'total\\s+due', 'amount\\s+due', 'totaal'];
-  const na = naLabel(vlak, labels, 60);
+  const labels = ['totaalbedrag\\s+van\\s+deze\\s+factuur', 'totaal\\s+te\\s+betalen', 'te\\s+betalen\\s+bedrag', 'nog\\s+te\\s+betalen', 'openstaand(?:\\s+bedrag)?', 'factuurbedrag', '\\btotaalbedrag', '\\btotaal\\s+incl(?:usief|\\.)?\\s*(?:btw)?', 'te\\s+betalen', '\\btotaal\\s+eur', 'total\\s+due', 'amount\\s+due', '\\btotaal\\b'];
   const bedragUit = (s) => { const m = (s || '').match(BEDRAG_RE); return m ? Math.abs(parseBedrag(m[0])) : 0; };
-  r.bedrag = bedragUit(na);
+  const voor = /(\d{1,3}(?:\.\d{3})*,\d{2}|\d+\.\d{2})\s*(?:EUR\s*)?te\s+voldoen/i.exec(vlak);
+  if (voor) r.bedrag = Math.abs(parseBedrag(voor[1]));
+  if (!r.bedrag) zoek: for (const l of labels) {
+    for (const m of vlak.matchAll(new RegExp(l, 'gi'))) {
+      const na = vlak.slice(m.index + m[0].length, m.index + m[0].length + 60);
+      if (/^\W{0,3}(excl|exclusief|btw\b)/i.test(na) || /excl/i.test(na.slice(0, 18))) continue;
+      const b = bedragUit(na);
+      if (b) { r.bedrag = b; break zoek; }
+    }
+  }
   if (!r.bedrag) {
     const alle = (vlak.match(BEDRAG_RE) || []).map((x) => Math.abs(parseBedrag(x)));
     r.bedrag = alle.length ? Math.max(...alle) : 0;
@@ -120,12 +146,18 @@ function leesFactuur(tekst, eigenIban) {
   const ken = /betalings?kenmerk\s*:?\s*((?:\d[\s]?){7,16}\d)/i.exec(vlak);
   if (ken) r.kenmerk = ken[1].replace(/\s/g, '');
 
-  r.incasso = /automatisch\s+(?:ge[iï]ncasseerd|afgeschreven|ge[iï]nd)|wordt\s+(?:binnenkort\s+)?(?:automatisch\s+)?(?:van\s+uw\s+rekening\s+)?(?:afgeschreven|ge[iï]ncasseerd)|via\s+(?:automatische\s+)?incasso|incassodatum|sepa[-\s]?incasso/i.test(vlak);
+  r.alBetaald = /reeds\s+(?:betaald|voldaan)|is\s+(?:al\s+)?voldaan|al\s+betaald|betaalmethode\s*:?\s*(?:ideal|wero|creditcard|paypal|bancontact|pin)/i.test(vlak);
+  r.incasso = (eigenIban && ibanSchoon(vlak).includes(ibanSchoon(eigenIban)) && ibanGeldig(eigenIban)) ||
+    /\bincasso|ge[iï]ncasseerd|mandaat(?:kenmerk|referentie)?|van\s+uw\s+(?:rekening|iban)[\s\S]{0,60}(?:afgeschreven|ge[iï]ncasseerd)|zal[\s\S]{0,60}worden\s+afgeschreven|automatisch\s+(?:ge[iï]ncasseerd|afgeschreven|ge[iï]nd)|wordt\s+(?:binnenkort\s+)?(?:automatisch\s+)?(?:van\s+uw\s+rekening\s+)?(?:afgeschreven|ge[iï]ncasseerd)|via\s+(?:automatische\s+)?incasso|incassodatum|sepa[-\s]?incasso/i.test(vlak);
 
   const tnv = /t\.?\s?n\.?\s?v\.?\s*:?\s*([A-Za-z0-9&'.,\- ]{3,60}?)(?=\s{2,}|\s(?:IBAN|BIC|KvK|o\.v\.v|onder|te\s|$))/i.exec(vlak);
-  if (tnv) r.naam = tnv[1].trim();
+  if (tnv && !eigenWoorden().some((w) => tnv[1].toLowerCase().includes(w))) r.naam = tnv[1].trim();
   if (!r.naam) {
-    const eerste = t.split('\n').map((x) => x.trim()).find((x) => /[A-Za-z]{3}/.test(x) && x.length < 60 && !/factuur|invoice|pagina|datum/i.test(x));
+    const eigen = eigenWoorden();
+    const eerste = t.split('\n').map((x) => x.trim()).find((x) => /[A-Za-z]{3}/.test(x) && x.length < 60
+      && !/factuur|invoice|pagina|datum|postbus|t\.?a\.?v|adres|telefoon|tel\b|kvk|btw|iban|www\.|@|gevestigd|aantal|omschrijving/i.test(x)
+      && !/\d{4}\s?[A-Z]{2}\b/.test(x) && !/^[A-Za-zÀ-ÿ.' -]{3,40}\s\d{1,4}\s?[a-zA-Z]?$/.test(x) && !/^(inh|reg|prijs|totaal|bedrag|debiteur|ordernummer|bij\s+betaling|telefax|administratie)\b/i.test(x) && !/^(the\s+)?(nederland|netherlands|deutschland|duitsland|belgi[eë])$/i.test(x)
+      && !eigen.some((w) => x.toLowerCase().includes(w)));
     r.naam = eerste || '';
   }
   return r;
@@ -174,13 +206,16 @@ async function voegToe(paden, opties = {}) {
     const rij = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pad: p, bestand: meta ? meta.naam : p.split(/[\\/]/).pop(), ...f, leesfout: !!res.fout };
     if (meta) {
       rij.mail = { van: meta.van, onderwerp: meta.onderwerp, datum: meta.datum };
-      B.verwerkt[meta.sleutel] = 1;
-      if (!rij.naam || rij.naam.length < 3) rij.naam = meta.van;
+      if (!res.fout) B.verwerkt[meta.sleutel] = 1; // onleesbaar? volgende keer opnieuw proberen
+      if (!B.bekend[ibanSchoon(rij.iban)] && meta.van) rij.naam = meta.van; // afzender is meestal de beste naam
     }
+    if (!rij.incasso && isIncassant(rij.iban, res.tekst || '', rij.nummer)) { rij.incasso = true; rij.incassoBank = true; }
     // Uit de mail: alleen echte, nog te betalen facturen klaarzetten.
     if (opties.filter) {
-      if (f.incasso) { tel.incasso++; continue; }
-      if (!f.iban && !f.bedrag) { tel.geenFactuur++; continue; }
+      if (rij.incasso) { tel.incasso++; continue; }
+      if (f.alBetaald) { tel.betaald++; continue; }
+      if (res.fout) { tel.onleesbaar = (tel.onleesbaar || 0) + 1; continue; }
+      if ((!f.iban && !f.bedrag) || !/factuur|invoice|nota|te\s+betalen|creditnota/i.test(res.tekst || '')) { tel.geenFactuur++; continue; }
       if (B.betaald[sleutel(rij)]) { tel.betaald++; continue; }
     }
     if (B.bekend[ibanSchoon(rij.iban)] && !res.fout) rij.naam = B.bekend[ibanSchoon(rij.iban)];
@@ -190,7 +225,7 @@ async function voegToe(paden, opties = {}) {
     B.rijen.push(rij);
     nieuw++;
   }
-  const extra = [tel.incasso && tel.incasso + ' incasso overgeslagen', tel.betaald && tel.betaald + ' al betaald', tel.geenFactuur && tel.geenFactuur + ' geen factuur herkend'].filter(Boolean).join(', ');
+  const extra = [tel.incasso && tel.incasso + ' incasso overgeslagen', tel.betaald && tel.betaald + ' al betaald', tel.geenFactuur && tel.geenFactuur + ' geen factuur herkend', tel.onleesbaar && tel.onleesbaar + ' niet leesbaar'].filter(Boolean).join(', ');
   msg.textContent = (nieuw ? nieuw + (nieuw === 1 ? ' factuur' : ' facturen') + ' klaargezet. Controleer de gegevens.' : 'Geen nieuwe facturen.') + (extra ? ' (' + extra + ')' : '');
   betSave();
   renderBetalen();
@@ -226,7 +261,8 @@ function renderBetalen() {
     const notes = [];
     if (r.mail) notes.push(el('span', { class: 'tag' }, 'Uit mail van ' + r.mail.van + ' · ' + new Date(r.mail.datum).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })));
     if (r.leesfout) notes.push(el('span', { class: 'tag bad' }, 'Pdf niet leesbaar – vul zelf in'));
-    if (r.incasso) notes.push(el('span', { class: 'tag' }, 'Lijkt een incasso – niet aangevinkt'));
+    if (r.incasso) notes.push(el('span', { class: 'tag' }, r.incassoBank ? 'Wordt geïncasseerd volgens je bankafschrift – niet aangevinkt' : 'Lijkt een incasso – niet aangevinkt'));
+    if (r.alBetaald) notes.push(el('span', { class: 'tag bad' }, 'Volgens de factuur al betaald'));
     if (dubbel) notes.push(el('span', { class: 'tag bad' }, 'Zat al in betaalbestand van ' + dubbel));
     body.append(el('tr', { class: r.mee ? 'on' : '' },
       el('td', {}, cb),
@@ -351,6 +387,8 @@ function leesCsv(tekst) {
   const iI = kop.findIndex((k) => /^Tegenrekening IBAN/i.test(k));
   const iN = kop.findIndex((k) => /^Naam tegenpartij/i.test(k));
   const iB = kop.findIndex((k) => /^Bedrag/i.test(k));
+  const iC = kop.findIndex((k) => /^Code$/i.test(k));
+  const iInc = kop.findIndex((k) => /^Incassant ID/i.test(k));
   if (iI < 0 || iN < 0) return 0;
   let n = 0;
   for (const r of regels) {
@@ -358,6 +396,12 @@ function leesCsv(tekst) {
     const iban = ibanSchoon(c[iI]);
     if (!ibanGeldig(iban) || iban === ibanSchoon(S.betaalIban)) continue;
     if (iB >= 0 && !String(c[iB]).startsWith('-')) continue; // alleen afschrijvingen
+    if ((iC >= 0 && /^(ei|eb)$/i.test(c[iC])) || (iInc >= 0 && c[iInc])) {
+      B.incasso[iban] = (c[iN] || '').trim();
+      // Kenmerken als ESPNH00021872 in de omschrijving: zelfde voorvoegsel op een factuur = incasso
+      if (!B.incassoPrefix) B.incassoPrefix = {};
+      for (const w of c.join(' ').toUpperCase().match(/\b[A-Z]{3,}\d{4,}\b/g) || []) B.incassoPrefix[/^[A-Z]+/.exec(w)[0]] = B.incasso[iban];
+    }
     if (!B.bekend[iban]) { B.bekend[iban] = (c[iN] || '').trim(); n++; }
   }
   betSave();
@@ -410,14 +454,14 @@ function initBetalen() {
     drop.classList.remove('over');
     const files = [...e.dataTransfer.files];
     const csv = files.find((f) => /\.csv$/i.test(f.name));
-    if (csv) { const n = leesCsv(await csv.text()); $('#betMsg').textContent = n + ' rekeningnummers van eerdere betalingen onthouden.'; renderBetalen(); }
+    if (csv) { const n = leesCsv(await csv.text()); $('#betMsg').textContent = n + ' rekeningnummers van eerdere betalingen onthouden, ' + Object.keys(B.incasso).length + ' leveranciers die incasseren.'; renderBetalen(); }
     const paden = files.filter((f) => /\.pdf$/i.test(f.name)).map((f) => api.pad(f)).filter(Boolean);
     if (paden.length) await voegToe(paden);
     renderRecent();
   });
   $('#betMail').onclick = () => zoekInMail(false);
   $('#betKies').onclick = async () => { const p = await api.kiesPdfs(); if (p.length) { await voegToe(p); renderRecent(); } };
-  $('#betCsv').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const n = leesCsv(await f.text()); $('#betMsg').textContent = n + ' rekeningnummers van eerdere betalingen onthouden.'; e.target.value = ''; renderBetalen(); };
+  $('#betCsv').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const n = leesCsv(await f.text()); $('#betMsg').textContent = n + ' rekeningnummers van eerdere betalingen onthouden, ' + Object.keys(B.incasso).length + ' leveranciers die incasseren.'; e.target.value = ''; renderBetalen(); };
   $('#betMaak').onclick = maakBetaalbestand;
   $('#betAlles').onclick = () => { for (const r of B.rijen) if (magMee(r) && !r.incasso && B.bekend[ibanSchoon(r.iban)] && !B.betaald[sleutel(r)]) r.mee = true; betSave(); renderBetalen(); };
   $('#betSleep').addEventListener('dragstart', (e) => { e.preventDefault(); if (B.laatste) api.sleepBestand(B.laatste.pad); });
