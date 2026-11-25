@@ -483,6 +483,34 @@ function leesCsv(tekst) {
   return n;
 }
 
+/* ---------- Rabobank naast Betalen ---------- */
+const raboTab = () => S.tabs.find((x) => /rabo/i.test(x.name + ' ' + x.url));
+let raboGeladen = false;
+function laadRabo() {
+  if (raboGeladen) return;
+  raboGeladen = true;
+  const t = raboTab();
+  makeWeb($('#betRaboPane'), t ? t.url : '', { address: true });
+}
+function betLayout() {
+  const c = S.betCols || [1.25, 1];
+  $('#betSplit').style.gridTemplateColumns = `${c[0]}fr 10px ${c[1]}fr`;
+}
+function initBetSplit() {
+  betLayout();
+  const split = $('#betSplit');
+  dragHandle($('#betGutter'),
+    (e) => ({ x: e.clientX, w: [split.children[0].getBoundingClientRect().width, split.children[2].getBoundingClientRect().width] }),
+    (ev, st) => {
+      const tot = st.w[0] + st.w[1];
+      const l = Math.max(480, Math.min(tot - 320, st.w[0] + (ev.clientX - st.x)));
+      S.betCols = [Math.round(l), Math.round(tot - l)];
+      betLayout();
+    },
+    () => { S.betCols = [1.25, 1]; });
+  $('#betRaboFull').onclick = () => { const t = raboTab(); open(t ? 'tab-' + t.id : 'browser'); };
+}
+
 /* ---------- Opbouw ---------- */
 async function renderRecent() {
   const lijst = $('#betRecent');
@@ -541,8 +569,9 @@ function initBetalen() {
   $('#betAlles').onclick = () => { for (const r of B.rijen) if (magMee(r) && !r.incasso && B.bekend[ibanSchoon(r.iban)] && !B.betaald[sleutel(r)]) r.mee = true; betSave(); renderBetalen(); };
   $('#betSleep').addEventListener('dragstart', (e) => { e.preventDefault(); if (B.laatste) api.sleepBestand(B.laatste.pad); });
   $('#betToon').onclick = () => B.laatste && api.toonBestand(B.laatste.pad);
-  $('#betRabo').onclick = () => { const t = S.tabs.find((x) => /rabo/i.test(x.name + x.url)); open(t ? 'tab-' + t.id : 'browser'); };
+  $('#betRabo').onclick = () => { laadRabo(); const p = $('#betRaboPanel'); p.classList.add('flash'); setTimeout(() => p.classList.remove('flash'), 1200); };
   $('#betSluit').onclick = () => { B.laatste = null; betSave(); renderKlaar(); };
+  initBetSplit();
   renderBetalen();
   renderKlaar();
   renderIncasso();
@@ -567,6 +596,7 @@ function betalenGetoond() {
   if (!api || !api.recentePdfs) return;
   renderBetalen();
   renderRecent();
+  laadRabo();
   // Elk uur hooguit één keer vanzelf in de mail zoeken.
   if (api.mailFacturen && (!B.laatsteMailZoek || Date.now() - B.laatsteMailZoek > 3600e3)) zoekInMail(true);
 }

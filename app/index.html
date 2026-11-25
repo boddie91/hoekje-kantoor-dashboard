@@ -91,7 +91,8 @@
     </section>
 
     <!-- BETALEN -->
-    <section class="view scroll" id="view-betalen" aria-label="Betalen">
+    <section class="view" id="view-betalen" aria-label="Betalen">
+      <div class="bet-split" id="betSplit">
       <div class="betalen">
         <section class="card" aria-labelledby="h-bet-in">
           <div class="row between">
@@ -127,7 +128,7 @@
             Sleep naar Rabobank
           </div>
           <button class="btn" id="betToon">Toon in map</button>
-          <button class="btn primary" id="betRabo">Naar Rabobank</button>
+          <button class="btn primary" id="betRabo">Rabobank ernaast</button>
           <button class="icon" id="betSluit" aria-label="Melding sluiten"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg></button>
         </section>
 
@@ -155,6 +156,17 @@
           <ul id="incassoLijst"></ul>
         </details>
         <p class="small">Het dashboard betaalt nooit zelf. Het bestand importeer je in Rabobank; daar controleer en teken je de betalingen. Een nieuw rekeningnummer wordt nooit vanzelf aangevinkt.</p>
+      </div>
+      <div class="gutter" id="betGutter" role="separator" aria-orientation="vertical" aria-label="Breedte Betalen en Rabobank aanpassen" tabindex="0" title="Sleep om de breedte aan te passen (dubbelklik: standaard)"></div>
+      <section class="panel" id="betRaboPanel" aria-label="Rabobank">
+        <div class="panel-head">
+          <h2>Rabobank</h2>
+          <button class="icon" id="betRaboFull" aria-label="Rabobank groot openen" title="Groot openen">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-7 7"/><path d="M10 20H4v-6"/><path d="M4 20l7-7"/></svg>
+          </button>
+        </div>
+        <div class="pane" id="betRaboPane"></div>
+      </section>
       </div>
     </section>
 

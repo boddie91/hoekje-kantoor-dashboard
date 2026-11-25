@@ -167,3 +167,11 @@ select{height:40px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px;bac
 .betalen td input.mini.wide{width:240px}
 
 .bad-msg{color:#B34D4D;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Betalen naast Rabobank */
+.bet-split{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1.25fr 10px 1fr;column-gap:3px}
+.bet-split>.betalen{overflow:auto;min-width:0;padding-right:4px}
+.bet-split>.panel{min-width:0}
+.betalen table{min-width:820px}
+
+.panel.flash{outline:3px solid #2456C8;outline-offset:2px;transition:outline-color .3s}

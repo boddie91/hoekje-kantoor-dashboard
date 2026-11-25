@@ -31,6 +31,7 @@ const DEFAULTS = {
   betaalDagen: 2,
   betaalTermijn: 14,
   exactRatio: 0.5,
+  betCols: [1.25, 1],
 };
 
 function load() {
