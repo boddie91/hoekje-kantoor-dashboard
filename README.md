@@ -29,6 +29,8 @@ Ontwerp (alle schermen, ook wat nog gebouwd moet worden): https://claude.ai/arti
 - Electron 38 (Chromium). Websites draaien in `<webview>` met partitie `persist:hoekje`, zodat aanmeldingen bewaard blijven.
 - User-agent = standaard Chrome zonder "Electron" (anders blijven inlogpagina's van Microsoft en Exact hangen).
 - Meldingen van websites worden geweigerd (permission handler).
+- Snelheid: websites op het overzicht laden na elkaar (Exact links direct, Outlook na 2,5 s, Grootboek na 6 s, Exact rechts pas als gesplitst scherm aan staat).
+  "Groot openen" en de zijbalkknoppen Outlook/Grootboek/Exact vergroten het vak op het overzicht (`.grid[data-focus]`) in plaats van een tweede kopie te laden. Elke `<webview>` is een eigen proces: wees zuinig.
 - Instellingen in `localStorage` (`hoekje-kantoor-instellingen`). Later naar Supabase (zelfde project als de Grootboek Sorteerder, `hh_*`-tabellen niet aanraken).
 - Logboek: `%LOCALAPPDATA%\HoekjeKantoor\app-log.txt` (navigaties zonder zoekgedeelte, fouten, updates). Geen wachtwoorden of tokens loggen.
 - Kleuren: donker `#18202B`, blauw `#2456C8`, groen `#3D6B5C`, rood `#B34D4D`, achtergrond `#EEF1F5`, randen `#D8DEE6`.
@@ -40,7 +42,7 @@ Ontwerp (alle schermen, ook wat nog gebouwd moet worden): https://claude.ai/arti
 4. Vanuit de sandbox is de app nooit echt gestart: wees eerlijk over wat getest is en vraag de gebruiker om te testen.
    Bij problemen: vraag toegang tot `%LOCALAPPDATA%\HoekjeKantoor` en lees `app-log.txt`.
 
-## Gebouwd (v0.3)
+## Gebouwd (v0.4)
 Zijbalk, Exact Online met gesplitst scherm, Outlook, Grootboek Sorteerder (https://boddie91.github.io/grootboek-sorteerder/),
 rekenmachine, Radio 2/focus-muziek, website-tabbladen (Rabobank, Mijn KPN, Exact, Dropbox, Kassa), instellingenpagina,
 versleepbare tegelbreedtes, automatisch bijwerken.

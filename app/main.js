@@ -111,7 +111,6 @@ app.whenReady().then(() => {
   log('START versie', app.getVersion(), 'electron', process.versions.electron);
   for (const ses of [session.defaultSession, session.fromPartition(PARTITION)]) {
     ses.setUserAgent(ua);
-    ses.setSpellCheckerLanguages(['nl']);
     ses.setPermissionRequestHandler((wc, permission, cb) => {
       const ok = permission !== 'notifications';
       log('toestemming', permission, ok ? 'ja' : 'nee', short(wc.getURL()));

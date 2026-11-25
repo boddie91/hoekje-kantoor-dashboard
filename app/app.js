@@ -122,20 +122,31 @@ function fullView(id, title, url, opts = {}) {
 }
 
 let current = 'overzicht';
+// Exact, Outlook en de Grootboek Sorteerder staan op het overzicht. "Groot openen" vergroot dat
+// vak op het overzicht zelf, zodat er geen tweede kopie van de website hoeft te laden.
+const FOCUS = { exact: 'Exact Online', outlook: 'Outlook', grootboek: 'Grootboek Sorteerder' };
+function setFocus(f) {
+  $('.grid').dataset.focus = f || '';
+  $('#exactFull').setAttribute('aria-label', f === 'exact' ? 'Terug naar het overzicht' : 'Exact Online groot openen');
+  $('#gbFull').setAttribute('aria-label', f === 'grootboek' ? 'Terug naar het overzicht' : 'Grootboek Sorteerder groot openen');
+  if (f === 'grootboek') ensureLoaded('gb');
+  if (f === 'outlook') ensureLoaded('outlook');
+}
 function show(id) {
   current = id;
-  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.id === 'view-' + id));
+  const viewId = id in FOCUS ? 'overzicht' : id;
+  if (viewId === 'overzicht') setFocus(id in FOCUS ? id : '');
+  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.id === 'view-' + viewId));
   document.querySelectorAll('#sidebar .nav').forEach((b) => {
     if (b.dataset.view === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  const t = { overzicht: 'Overzicht', instellingen: 'Instellingen' }[id] || (fullViews[id] && fullViews[id].title) || '';
+  const t = { overzicht: 'Overzicht', instellingen: 'Instellingen' }[id] || FOCUS[id] || (fullViews[id] && fullViews[id].title) || '';
   $('#title').textContent = t;
 }
 
 function open(id) {
+  if (id === 'tab-exact') id = 'exact';
   if (id === 'browser') fullView('browser', 'Browser', S.browserHome, { address: true });
-  else if (id === 'outlook') fullView('outlook', 'Outlook', S.outlook);
-  else if (id === 'grootboek') fullView('grootboek', 'Grootboek Sorteerder', S.grootboek);
   else if (id.startsWith('tab-')) {
     const t = S.tabs.find((x) => 'tab-' + x.id === id);
     if (!t) return show('overzicht');
@@ -175,20 +186,30 @@ function setSplit(on) {
   $('#exactSplit').classList.toggle('single', !on);
   $('#splitBtn').setAttribute('aria-pressed', String(on));
 }
+// Websites op het overzicht laden na elkaar in plaats van allemaal tegelijk.
+const loaders = {
+  exactLeft: () => makeWeb($('#exactLeft'), S.exactLeft, { label: 'Links' }),
+  exactRight: () => makeWeb($('#exactRight'), S.exactRight, { label: 'Rechts' }),
+  outlook: () => makeWeb($('#outlookMini'), S.outlook),
+  gb: () => makeWeb($('#gbMini'), S.grootboek),
+};
+const loaded = {};
+function ensureLoaded(k) { if (!loaded[k]) { loaded[k] = true; loaders[k](); } }
+function reload(k) { loaded[k] = true; loaders[k](); }
 function initOverview() {
-  makeWeb($('#exactLeft'), S.exactLeft, { label: 'Links' });
-  makeWeb($('#exactRight'), S.exactRight, { label: 'Rechts' });
   setSplit(S.exactSplit);
-  $('#splitBtn').onclick = () => setSplit($('#splitBtn').getAttribute('aria-pressed') !== 'true');
-  $('#exactFull').onclick = () => {
-    const t = S.tabs.find((x) => x.id === 'exact');
-    if (t) open('tab-exact'); else { fullView('exactfull', 'Exact Online', S.exactLeft, { address: true }); show('exactfull'); }
+  ensureLoaded('exactLeft');
+  setTimeout(() => ensureLoaded('outlook'), 2500);
+  setTimeout(() => ensureLoaded('gb'), 6000);
+  if (S.exactSplit) setTimeout(() => ensureLoaded('exactRight'), 9000);
+  $('#splitBtn').onclick = () => {
+    const on = $('#splitBtn').getAttribute('aria-pressed') !== 'true';
+    setSplit(on);
+    if (on) ensureLoaded('exactRight');
   };
-  makeWeb($('#outlookMini'), S.outlook);
-  makeWeb($('#gbMini'), S.grootboek);
-  $('#gbFull').onclick = () => open('grootboek');
+  $('#exactFull').onclick = () => (current === 'exact' ? open('overzicht') : open('exact'));
+  $('#gbFull').onclick = () => (current === 'grootboek' ? open('overzicht') : open('grootboek'));
 }
-
 
 /* ---------- Breedte van de tegels ---------- */
 const MINW = [260, 240, 260];
@@ -344,11 +365,11 @@ function renderSettings() {
       S[k] = inp.type === 'checkbox' ? inp.checked : normUrl(inp.value);
       if (inp.type !== 'checkbox') inp.value = S[k];
       save();
-      if (k === 'exactLeft') makeWeb($('#exactLeft'), S.exactLeft, { label: 'Links' });
-      if (k === 'exactRight') makeWeb($('#exactRight'), S.exactRight, { label: 'Rechts' });
+      if (k === 'exactLeft') reload('exactLeft');
+      if (k === 'exactRight' && loaded.exactRight) reload('exactRight');
       if (k === 'exactSplit') setSplit(S.exactSplit);
-      if (k === 'outlook') makeWeb($('#outlookMini'), S.outlook);
-      if (k === 'grootboek') makeWeb($('#gbMini'), S.grootboek);
+      if (k === 'outlook') reload('outlook');
+      if (k === 'grootboek') reload('gb');
     };
   });
   const list = $('#tabList');

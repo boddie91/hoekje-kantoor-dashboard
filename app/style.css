@@ -100,3 +100,10 @@ body.dragging webview{pointer-events:none}
 .update[hidden]{display:none}
 .btn.primary{background:#2456C8;color:#fff;border-color:#2456C8}
 .btn.primary:hover{background:#1C47A8}
+
+/* Een vak groot openen op het overzicht */
+.grid[data-focus="exact"],.grid[data-focus="outlook"],.grid[data-focus="grootboek"]{grid-template-columns:1fr !important}
+.grid[data-focus="exact"]>:not(.exact),
+.grid[data-focus="outlook"]>:not(#outlookPanel),
+.grid[data-focus="grootboek"]>:not(.col),
+.grid[data-focus="grootboek"] .col>:not(#gbPanel){display:none !important}
