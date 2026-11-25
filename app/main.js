@@ -131,11 +131,10 @@ app.on('web-contents-created', (e, contents) => {
   contents.on('did-start-navigation', (ev) => { if (ev.isMainFrame) log(tag, 'navigeert', short(ev.url)); });
   contents.on('did-fail-load', (ev, code, desc, url, isMain) => { if (isMain && code !== -3) log(tag, 'MISLUKT', code, desc, short(url)); });
   contents.on('render-process-gone', (ev, d) => log(tag, 'GECRASHT', d.reason));
-  contents.on('console-message', (ev, level, message) => {
-    const lvl = ev && ev.level !== undefined ? ev.level : level;
-    const msg = ev && ev.message !== undefined ? ev.message : message;
-    if (lvl === 'error' || lvl === 3) log(tag, 'console-fout', String(msg).slice(0, 300));
+  contents.on('console-message', (ev) => {
+    if (ev.level === 'error') log(tag, 'console-fout', String(ev.message).slice(0, 300));
   });
+  contents.on('certificate-error', (ev, url, error) => log(tag, 'CERTIFICAAT', error, short(url)));
   if (type !== 'webview') return;
   contents.setWindowOpenHandler(({ url }) => {
     log(tag, 'pop-up', short(url));
