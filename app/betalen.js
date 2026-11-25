@@ -396,6 +396,7 @@ function maakXml(rijen) {
     <PmtInf>
       <PmtInfId>${msgId}-${gi + 1}</PmtInfId>
       <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>false</BtchBookg>
       <NbOfTxs>${rs.length}</NbOfTxs>
       <CtrlSum>${bedrag(som(rs))}</CtrlSum>
       <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl></PmtTpInf>
