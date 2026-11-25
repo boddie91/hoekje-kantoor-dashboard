@@ -140,6 +140,10 @@ ipcMain.handle('bewaar-betaalbestand', (e, xml, naam) => {
   return { pad: p };
 });
 
+ipcMain.handle('pdf-base64', (e, p) => {
+  if (!isPdf(p) || path.dirname(p) !== app.getPath('downloads')) return null;
+  return fs.readFileSync(p).toString('base64');
+});
 ipcMain.on('toon-bestand', (e, p) => { if (isOwnFile(p)) shell.showItemInFolder(p); });
 ipcMain.on('open-bestand', (e, p) => { if (isPdf(p)) shell.openPath(p); });
 ipcMain.on('sleep-bestand', (e, p) => {
@@ -187,6 +191,23 @@ app.whenReady().then(() => {
     });
     ses.setPermissionCheckHandler((wc, permission) => permission !== 'notifications');
   }
+  // Downloads uit de websites: zonder opslaan-venster naar Downloads. Een pdf uit Outlook gaat ook naar de Grootboek Sorteerder.
+  session.fromPartition(PARTITION).on('will-download', (ev, item, wc) => {
+    const dir = app.getPath('downloads');
+    const naam = item.getFilename().replace(/[\\/:*?"<>|]/g, '_') || 'download';
+    const ext = path.extname(naam);
+    let p = path.join(dir, naam);
+    for (let i = 1; fs.existsSync(p); i++) p = path.join(dir, `${path.basename(naam, ext)} (${i})${ext}`);
+    item.setSavePath(p);
+    let bron = '';
+    try { bron = wc ? wc.getURL() : ''; } catch (e) {}
+    item.once('done', (e, state) => {
+      log('download', state, path.basename(p), short(bron));
+      if (state === 'completed' && /\.pdf$/i.test(p) && /outlook\.(live|office|office365)\.com/i.test(bron) && win && !win.isDestroyed()) {
+        win.webContents.send('pdf-gedownload', { pad: p, naam: path.basename(p) });
+      }
+    });
+  });
   createWindow();
   setTimeout(checkUpdate, 8000);
   setInterval(checkUpdate, 3 * 60 * 60 * 1000);

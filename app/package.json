@@ -1,7 +1,7 @@
 {
   "name": "hoekje-kantoor",
   "productName": "Hoekje kantoor",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Kantoor-dashboard voor Café Cafetaria 't Hoekje",
   "main": "main.js",
   "private": true,

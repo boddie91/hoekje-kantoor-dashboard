@@ -21,6 +21,7 @@ const DEFAULTS = {
   musicSource: 'radio2',
   volume: 40,
   cols: [3, 2, 1.3],
+  gbAuto: true,
   betaalNaam: '',
   betaalIban: '',
   betaalBic: 'RABONL2U',
@@ -105,6 +106,7 @@ function makeWeb(container, url, opts = {}) {
   } else if (opts.label) {
     bar.append(el('span', { class: 'label' }, opts.label));
   }
+  wv.addEventListener('dom-ready', () => { wv.dataset.ready = '1'; });
   container.dataset.home = url;
   container.append(bar, wv);
   return wv;
@@ -287,6 +289,37 @@ function initResize() {
     },
     () => { S.exactRatio = 0.5; });
 }
+
+/* ---------- Pdf uit Outlook naar de Grootboek Sorteerder ---------- */
+let toastTimer;
+function toast(tekst, fout) {
+  const t = $('#toast');
+  t.textContent = tekst;
+  t.classList.toggle('fout', !!fout);
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+}
+const wacht = (ms) => new Promise((r) => setTimeout(r, ms));
+async function naarGrootboek(d) {
+  if (!S.gbAuto || !window.hoekje || !window.hoekje.pdfBase64) return;
+  ensureLoaded('gb');
+  const b64 = await window.hoekje.pdfBase64(d.pad);
+  if (!b64) return;
+  for (let i = 0; i < 30; i++) {
+    const wv = $('#gbMini webview');
+    if (wv && wv.dataset.ready) {
+      try {
+        const ok = await wv.executeJavaScript(`typeof window.grootboekLaadPdf === 'function' ? window.grootboekLaadPdf(${JSON.stringify(b64)}, ${JSON.stringify(d.naam)}) : 'nee'`);
+        if (ok === true) { toast(d.naam + ' staat in de Grootboek Sorteerder'); return; }
+        if (ok === 'nee' && i > 8) break;
+      } catch (e) { /* pagina nog niet klaar */ }
+    }
+    await wacht(500);
+  }
+  toast(d.naam + ' kon niet in de Grootboek Sorteerder worden geopend. Vernieuw de Grootboek Sorteerder en probeer het opnieuw.', true);
+}
+if (window.hoekje && window.hoekje.opPdfGedownload) window.hoekje.opPdfGedownload(naarGrootboek);
 
 /* ---------- Rekenmachine ---------- */
 const calc = { cur: '0', acc: null, op: null, fresh: true };

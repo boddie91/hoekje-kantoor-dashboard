@@ -14,4 +14,6 @@ contextBridge.exposeInMainWorld('hoekje', {
   toonBestand: (p) => ipcRenderer.send('toon-bestand', p),
   openBestand: (p) => ipcRenderer.send('open-bestand', p),
   sleepBestand: (p) => ipcRenderer.send('sleep-bestand', p),
+  opPdfGedownload: (cb) => ipcRenderer.on('pdf-gedownload', (e, d) => cb(d)),
+  pdfBase64: (p) => ipcRenderer.invoke('pdf-base64', p),
 });
