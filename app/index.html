@@ -105,7 +105,7 @@
             <div class="drop" id="betDrop">
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/></svg>
               <strong>Sleep factuur-pdf's hierheen</strong>
-              <span class="small">of een Rabobank-CSV, zodat het dashboard eerdere rekeningnummers kent</span>
+              <span class="small">of (niet verplicht) een Rabobank-CSV, zodat het dashboard eerdere betalingen en incasso's kent</span>
               <button class="btn" id="betKies">Pdf's kiezen</button>
             </div>
             <div class="recent">
@@ -148,6 +148,11 @@
             <button class="btn primary big" id="betMaak" disabled>Betaalbestand maken</button>
           </div>
         </section>
+        <details class="card incasso">
+          <summary><h2>Leveranciers die incasseren (<span id="incassoAantal">0</span>)</h2></summary>
+          <p class="small">Facturen van deze leveranciers worden overgeslagen. Je voegt er een toe met de knop "Incasso" bij een factuur.</p>
+          <ul id="incassoLijst"></ul>
+        </details>
         <p class="small">Het dashboard betaalt nooit zelf. Het bestand importeer je in Rabobank; daar controleer en teken je de betalingen. Een nieuw rekeningnummer wordt nooit vanzelf aangevinkt.</p>
       </div>
     </section>

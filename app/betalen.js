@@ -6,7 +6,7 @@ const BET_STORE = 'hoekje-kantoor-betalen';
 const api = window.hoekje;
 
 function betLoad() {
-  try { return Object.assign({ rijen: [], bekend: {}, betaald: {}, verwerkt: {}, incasso: {}, incassoPrefix: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
+  try { return Object.assign({ rijen: [], bekend: {}, betaald: {}, verwerkt: {}, incasso: {}, incassoPrefix: {}, incassoAfzender: {} }, JSON.parse(localStorage.getItem(BET_STORE) || '{}')); }
   catch (e) { return { rijen: [], bekend: {}, betaald: {}, verwerkt: {}, incasso: {} }; }
 }
 let B = betLoad();
@@ -70,8 +70,9 @@ function eigenWoorden() {
   return [...new Set(['hoekje', ...w])];
 }
 // Incasso volgens het bankafschrift: rekeningnummer of naam van een incassant.
-function isIncassant(iban, tekst, nummer) {
+function isIncassant(iban, tekst, nummer, adres) {
   if (iban && B.incasso[ibanSchoon(iban)]) return true;
+  if (adres && B.incassoAfzender && B.incassoAfzender[String(adres).toLowerCase()]) return true;
   const pre = /^([A-Z]{3,})\d{4,}/.exec(String(nummer || '').toUpperCase());
   if (pre && B.incassoPrefix[pre[1]]) return true;
   const plat = normNaam(tekst);
@@ -205,11 +206,11 @@ async function voegToe(paden, opties = {}) {
     const f = res.tekst ? leesFactuur(res.tekst, S.betaalIban) : { iban: '', bedrag: 0, nummer: '', naam: '', factuurdatum: '', vervaldatum: '', termijn: 0, kenmerk: '', incasso: false };
     const rij = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pad: p, bestand: meta ? meta.naam : p.split(/[\\/]/).pop(), ...f, leesfout: !!res.fout };
     if (meta) {
-      rij.mail = { van: meta.van, onderwerp: meta.onderwerp, datum: meta.datum };
+      rij.mail = { van: meta.van, adres: meta.vanAdres || '', onderwerp: meta.onderwerp, datum: meta.datum };
       if (!res.fout) B.verwerkt[meta.sleutel] = 1; // onleesbaar? volgende keer opnieuw proberen
       if (!B.bekend[ibanSchoon(rij.iban)] && meta.van) rij.naam = meta.van; // afzender is meestal de beste naam
     }
-    if (!rij.incasso && isIncassant(rij.iban, res.tekst || '', rij.nummer)) { rij.incasso = true; rij.incassoBank = true; }
+    if (!rij.incasso && isIncassant(rij.iban, res.tekst || '', rij.nummer, meta && meta.vanAdres)) { rij.incasso = true; rij.incassoBank = true; }
     // Uit de mail: alleen echte, nog te betalen facturen klaarzetten.
     if (opties.filter) {
       if (rij.incasso) { tel.incasso++; continue; }
@@ -272,6 +273,8 @@ function renderBetalen() {
       el('td', {}, veld(r, 'iban', { label: 'Rekeningnummer', extra: { class: 'mono', value: ibanMooi(r.iban) } }), el('div', { class: 'sub ' + st.cls }, st.tekst)),
       el('td', { class: 'acts' },
         el('button', { class: 'btn', onclick: () => api.openBestand(r.pad) }, 'Bekijken'),
+        el('button', { class: 'btn', title: 'Deze factuur is al betaald: uit de lijst halen en onthouden', onclick: () => markeerBetaald(r) }, 'Al betaald'),
+        el('button', { class: 'btn', title: 'Deze leverancier incasseert: nu en voortaan overslaan', onclick: () => markeerIncasso(r) }, 'Incasso'),
         el('button', { class: 'icon', 'aria-label': 'Verwijderen uit de lijst', title: 'Uit de lijst halen', html: ICON.trash, onclick: () => { B.rijen = B.rijen.filter((x) => x !== r); betSave(); renderBetalen(); } }))));
   }
   $('#betEmpty').hidden = B.rijen.length > 0;
@@ -284,6 +287,42 @@ function renderTotaal() {
   $('#betTotaal').textContent = mee.length + (mee.length === 1 ? ' betaling · ' : ' betalingen · ') + euro(tot);
   $('#betMaak').disabled = !mee.length;
   document.querySelectorAll('#betRows tr').forEach((tr, i) => tr.classList.toggle('on', !!(B.rijen[i] && B.rijen[i].mee)));
+}
+
+/* ---------- Zelf aangeven: al betaald of incasso ---------- */
+function markeerBetaald(r) {
+  B.betaald[sleutel(r)] = nlDatum(iso(new Date())) + ' (zelf aangegeven)';
+  if (ibanGeldig(r.iban) && (r.naam || '').trim()) B.bekend[ibanSchoon(r.iban)] = r.naam.trim();
+  B.rijen = B.rijen.filter((x) => x !== r);
+  betSave(); renderBetalen();
+  $('#betMsg').textContent = (r.naam || 'Factuur') + ' staat als betaald genoteerd.';
+}
+function markeerIncasso(r) {
+  const naam = (r.naam || (r.mail && r.mail.van) || 'Leverancier').trim();
+  if (ibanGeldig(r.iban)) B.incasso[ibanSchoon(r.iban)] = naam;
+  if (r.mail && r.mail.adres) B.incassoAfzender[r.mail.adres.toLowerCase()] = naam;
+  // Andere facturen van dezelfde leverancier in de lijst ook weghalen.
+  B.rijen = B.rijen.filter((x) => x !== r && !isIncassant(x.iban, '', x.nummer, x.mail && x.mail.adres));
+  betSave(); renderBetalen(); renderIncasso();
+  $('#betMsg').textContent = 'Facturen van ' + naam + ' worden voortaan overgeslagen (incasso).';
+}
+function renderIncasso() {
+  const ul = $('#incassoLijst');
+  if (!ul) return;
+  const items = [];
+  for (const [iban, naam] of Object.entries(B.incasso || {})) items.push({ soort: 'iban', sleutel: iban, naam, info: ibanMooi(iban) });
+  for (const [adres, naam] of Object.entries(B.incassoAfzender || {})) items.push({ soort: 'adres', sleutel: adres, naam, info: adres });
+  items.sort((a, b) => a.naam.localeCompare(b.naam));
+  $('#incassoAantal').textContent = items.length;
+  ul.innerHTML = '';
+  for (const it of items) {
+    ul.append(el('li', {},
+      el('span', { class: 'fn' }, it.naam), el('span', { class: 'small mono' }, it.info),
+      el('button', { class: 'icon', 'aria-label': it.naam + ' niet meer als incasso behandelen', title: 'Niet meer als incasso behandelen', html: ICON.trash, onclick: () => {
+        if (it.soort === 'iban') delete B.incasso[it.sleutel]; else delete B.incassoAfzender[it.sleutel];
+        betSave(); renderIncasso();
+      } })));
+  }
 }
 
 /* ---------- SEPA-bestand ---------- */
@@ -470,6 +509,7 @@ function initBetalen() {
   $('#betSluit').onclick = () => { B.laatste = null; betSave(); renderKlaar(); };
   renderBetalen();
   renderKlaar();
+  renderIncasso();
 }
 function betalenGetoond() {
   if (!api || !api.recentePdfs) return;

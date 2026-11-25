@@ -151,3 +151,15 @@ select{height:40px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px;bac
 
 .toast{position:fixed;right:20px;bottom:20px;max-width:420px;padding:12px 16px;border-radius:10px;background:#18202B;color:#fff;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,.2);z-index:50}
 .toast.fout{background:#B34D4D}
+
+.betalen .acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.betalen .acts .btn{min-height:36px;padding:0 10px;font-size:13px}
+.incasso summary{cursor:pointer;list-style:none}
+.incasso summary::-webkit-details-marker{display:none}
+.incasso summary h2{display:inline}
+.incasso summary::before{content:"▸ ";color:#4A5361}
+.incasso[open] summary::before{content:"▾ "}
+.incasso ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.incasso li{display:flex;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid #E4E8EE}
+.incasso li .fn{flex:1;font-weight:600}
+.mono{font-family:Consolas,ui-monospace,monospace}
