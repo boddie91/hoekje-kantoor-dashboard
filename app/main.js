@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -33,7 +33,8 @@ async function checkUpdate() {
   if (updateBusy) return 'bezig';
   updateBusy = true;
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/app?ref=main`, {
+    // net.fetch gebruikt het netwerk van Chromium (zelfde instellingen als de websites in de app).
+    const res = await net.fetch(`https://api.github.com/repos/${REPO}/contents/app?ref=main`, {
       headers: { 'User-Agent': 'HoekjeKantoor', Accept: 'application/vnd.github+json' },
     });
     if (!res.ok) { log('update: controle mislukt', res.status); return 'mislukt'; }
@@ -49,7 +50,7 @@ async function checkUpdate() {
     if (!changed.length) { log('update: al de nieuwste versie'); return updateReady ? 'klaar' : 'actueel'; }
     const files = [];
     for (const f of changed) {
-      const r = await fetch(f.download_url, { headers: { 'User-Agent': 'HoekjeKantoor' } });
+      const r = await net.fetch(f.download_url, { headers: { 'User-Agent': 'HoekjeKantoor' } });
       if (!r.ok) throw new Error('download ' + f.name + ' ' + r.status);
       const b = Buffer.from(await r.arrayBuffer());
       if (gitSha(b) !== f.sha) throw new Error('controle mislukt voor ' + f.name);
@@ -67,7 +68,7 @@ async function checkUpdate() {
     if (win && !win.isDestroyed()) win.webContents.send('update-klaar');
     return 'klaar';
   } catch (e) {
-    log('update: fout', e.message);
+    log('update: fout', e.message, e.cause ? String(e.cause.code || e.cause.message || e.cause) : '');
     return 'mislukt';
   } finally {
     updateBusy = false;
