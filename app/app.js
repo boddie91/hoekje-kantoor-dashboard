@@ -90,7 +90,7 @@ function makeWeb(container, url, opts = {}) {
       el('span', {}, 'Vul het adres in bij Instellingen (tandwiel onderaan de zijbalk).')));
     return null;
   }
-  const wv = el('webview', { src: url, partition: PARTITION, allowpopups: true });
+  const wv = el('webview', { src: url, partition: PARTITION, allowpopups: true, plugins: true }); // plugins = ingebouwde pdf-viewer
   const back = el('button', { class: 'icon', 'aria-label': 'Vorige pagina', title: 'Vorige', html: ICON.back, onclick: () => wv.canGoBack() && wv.goBack() });
   const fwd = el('button', { class: 'icon', 'aria-label': 'Volgende pagina', title: 'Volgende', html: ICON.fwd, onclick: () => wv.canGoForward() && wv.goForward() });
   const home = el('button', { class: 'icon', 'aria-label': 'Startpagina', title: 'Startpagina', html: ICON.home, onclick: () => wv.loadURL(container.dataset.home || url) });

@@ -261,10 +261,12 @@ app.on('web-contents-created', (e, contents) => {
   if (type !== 'webview') return;
   contents.setWindowOpenHandler(({ url }) => {
     log(tag, 'pop-up', short(url));
-    if (!/^https?:/i.test(url)) { shell.openExternal(url); return { action: 'deny' }; }
+    // Webpagina's, pdf's (blob:/data:) en lege vensters openen in de app zelf, met de ingebouwde pdf-viewer.
+    // Alleen andere soorten links (mailto:, tel:, …) gaan naar Windows.
+    if (!/^(https?:|blob:|data:|about:blank)/i.test(url)) { shell.openExternal(url); return { action: 'deny' }; }
     return {
       action: 'allow',
-      overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 1100, height: 800, webPreferences: { partition: PARTITION } },
+      overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 1100, height: 800, icon: path.join(__dirname, 'icon.ico'), webPreferences: { partition: PARTITION, plugins: true } },
     };
   });
 });
