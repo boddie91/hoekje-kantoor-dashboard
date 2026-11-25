@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld('hoekje', {
   sleepBestand: (p) => ipcRenderer.send('sleep-bestand', p),
   opPdfGedownload: (cb) => ipcRenderer.on('pdf-gedownload', (e, d) => cb(d)),
   pdfBase64: (p) => ipcRenderer.invoke('pdf-base64', p),
+  reservekopie: (json) => ipcRenderer.invoke('reservekopie', json),
+  toonReservekopie: () => ipcRenderer.send('toon-reservekopie'),
 });

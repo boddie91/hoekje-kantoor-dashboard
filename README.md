@@ -42,7 +42,7 @@ Ontwerp (alle schermen, ook wat nog gebouwd moet worden): https://claude.ai/arti
 4. Vanuit de sandbox is de app nooit echt gestart: wees eerlijk over wat getest is en vraag de gebruiker om te testen.
    Bij problemen: vraag toegang tot `%LOCALAPPDATA%\HoekjeKantoor` en lees `app-log.txt`.
 
-## Gebouwd (v0.5)
+## Gebouwd (v0.6)
 Zijbalk, Exact Online met gesplitst scherm, Outlook, Grootboek Sorteerder (https://boddie91.github.io/grootboek-sorteerder/),
 rekenmachine, Radio 2/focus-muziek, website-tabbladen (Rabobank, Mijn KPN, Exact, Dropbox, Kassa), instellingenpagina,
 versleepbare tegelbreedtes, automatisch bijwerken.
@@ -65,5 +65,11 @@ alleen lokaal in de instellingen, **nooit in deze openbare repo**. Gegevens: `lo
 4. Betalen uitbreiden: facturen rechtstreeks uit de mailbox halen in plaats van via Downloads; klembord.
 5. Facturenoverzicht met status per factuur; teller op de knop Betalen; archiveren in Dropbox per kwartaal.
 6. Instellingen naar Supabase.
+
+**Grootboek Sorteerder-koppeling (v0.5.1/v0.6)**: downloads uit websites gaan zonder venster naar Downloads; een pdf die in
+Outlook wordt gedownload gaat via `window.grootboekLaadPdf` naar de Grootboek Sorteerder (instelling `gbAuto`).
+Elke 5 minuten leest het dashboard `localStorage['grootboek-sorteerder-leveranciers']` uit de Grootboek-webview en schrijft
+die (bij wijziging) naar `<Dropbox>/Hoekje kantoor/Grootboek boekingsregels/` (`boekingsregels-laatste.json` + één per dag,
+90 dagen). Dropbox-map uit `%LOCALAPPDATA%\Dropbox\info.json`. Formaat = de handmatige back-up van de Grootboek Sorteerder.
 
 Apart project, later: betaalverzoeken aan debiteuren uit de kassa (MplusKASSA) via WhatsApp met één betaallink.

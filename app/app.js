@@ -290,6 +290,25 @@ function initResize() {
     () => { S.exactRatio = 0.5; });
 }
 
+/* ---------- Reservekopie van de boekingsregels in Dropbox ---------- */
+let laatsteKopie = '';
+async function maakReservekopie() {
+  if (!window.hoekje || !window.hoekje.reservekopie) return;
+  const wv = $('#gbMini webview');
+  if (!wv || !wv.dataset.ready) return;
+  try {
+    const json = await wv.executeJavaScript("localStorage.getItem('grootboek-sorteerder-leveranciers')");
+    if (!json || json === '[]' || json === laatsteKopie) return;
+    const r = await window.hoekje.reservekopie(json);
+    if (r.fout) { S.kopieStatus = 'Reservekopie mislukt: ' + r.fout; }
+    else { laatsteKopie = json; S.kopieStatus = 'Laatste reservekopie in Dropbox: ' + new Date(r.tijd).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    save();
+    const st = $('#kopieStatus'); if (st) st.textContent = S.kopieStatus;
+  } catch (e) { /* pagina nog niet klaar */ }
+}
+setTimeout(maakReservekopie, 30000);
+setInterval(maakReservekopie, 5 * 60 * 1000);
+
 /* ---------- Pdf uit Outlook naar de Grootboek Sorteerder ---------- */
 let toastTimer;
 function toast(tekst, fout) {
@@ -466,6 +485,11 @@ function initSettings() {
     S = structuredClone(DEFAULTS); save(); location.reload();
   };
   const api = window.hoekje;
+  if (api && api.toonReservekopie) {
+    $('#kopieStatus').textContent = S.kopieStatus || 'Nog geen reservekopie gemaakt.';
+    $('#kopieToon').onclick = () => api.toonReservekopie();
+    $('#kopieNu').onclick = () => { laatsteKopie = ''; maakReservekopie(); };
+  }
   if (api) {
     api.versie().then((v) => { $('#ver').textContent = v; });
     api.opUpdate(() => { $('#updateBar').hidden = false; });

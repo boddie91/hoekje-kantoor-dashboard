@@ -151,6 +151,40 @@ ipcMain.on('sleep-bestand', (e, p) => {
   e.sender.startDrag({ file: p, icon: nativeImage.createFromPath(path.join(__dirname, 'icon.ico')).resize({ width: 32, height: 32 }) });
 });
 
+/* ---------- Reservekopie van de boekingsregels in Dropbox ---------- */
+function dropboxMap() {
+  try {
+    const info = JSON.parse(fs.readFileSync(path.join(process.env.LOCALAPPDATA || '', 'Dropbox', 'info.json'), 'utf8'));
+    const p = (info.personal && info.personal.path) || (info.business && info.business.path);
+    if (p && fs.existsSync(p)) return p;
+  } catch (e) {}
+  const p = path.join(app.getPath('home'), 'Dropbox');
+  return fs.existsSync(p) ? p : null;
+}
+const KOPIE_MAP = () => { const d = dropboxMap(); return d ? path.join(d, 'Hoekje kantoor', 'Grootboek boekingsregels') : null; };
+ipcMain.handle('reservekopie', (e, json) => {
+  const dir = KOPIE_MAP();
+  if (!dir) return { fout: 'Geen Dropbox-map gevonden op deze computer.' };
+  try {
+    const data = JSON.parse(json);
+    if (!Array.isArray(data) || !data.length) return { fout: 'Geen regels om te bewaren.' };
+    fs.mkdirSync(dir, { recursive: true });
+    const tekst = JSON.stringify(data, null, 2);
+    fs.writeFileSync(path.join(dir, 'boekingsregels-laatste.json'), tekst, 'utf8');
+    const d = new Date();
+    const dag = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    fs.writeFileSync(path.join(dir, `boekingsregels-${dag}.json`), tekst, 'utf8');
+    // Dagkopieën van de laatste 90 dagen bewaren.
+    const oud = fs.readdirSync(dir).filter((n) => /^boekingsregels-\d{4}-\d{2}-\d{2}\.json$/.test(n)).sort();
+    while (oud.length > 90) fs.unlinkSync(path.join(dir, oud.shift()));
+    return { pad: dir, tijd: d.toISOString() };
+  } catch (err) {
+    log('reservekopie: fout', err.message);
+    return { fout: err.message };
+  }
+});
+ipcMain.on('toon-reservekopie', () => { const dir = KOPIE_MAP(); if (dir && fs.existsSync(dir)) shell.openPath(dir); });
+
 /* ---------- User-agent: gewone Chrome, zonder 'Electron' ---------- */
 const cleanUA = (ua) => ua.replace(/\s(Electron|hoekje-kantoor|HoekjeKantoor|Hoekje kantoor)\/\S+/gi, '');
 
