@@ -294,29 +294,38 @@ function dropboxMap() {
   const p = path.join(app.getPath('home'), 'Dropbox');
   return fs.existsSync(p) ? p : null;
 }
-const KOPIE_MAP = () => { const d = dropboxMap(); return d ? path.join(d, 'Hoekje kantoor', 'Grootboek boekingsregels') : null; };
-ipcMain.handle('reservekopie', (e, json) => {
-  const dir = KOPIE_MAP();
+const KOPIE_MAPPEN = { grootboek: ['Grootboek boekingsregels', 'boekingsregels'], betalen: ['Betalen', 'betalen'] };
+const KOPIE_MAP = (soort = 'grootboek') => { const d = dropboxMap(); const k = KOPIE_MAPPEN[soort]; return d && k ? path.join(d, 'Hoekje kantoor', k[0]) : null; };
+ipcMain.handle('reservekopie', (e, json, soort = 'grootboek') => {
+  const dir = KOPIE_MAP(soort);
   if (!dir) return { fout: 'Geen Dropbox-map gevonden op deze computer.' };
   try {
     const data = JSON.parse(json);
-    if (!Array.isArray(data) || !data.length) return { fout: 'Geen regels om te bewaren.' };
+    if (soort === 'grootboek' && (!Array.isArray(data) || !data.length)) return { fout: 'Geen regels om te bewaren.' };
+    const naam = KOPIE_MAPPEN[soort][1];
     fs.mkdirSync(dir, { recursive: true });
-    const tekst = JSON.stringify(data, null, 2);
-    fs.writeFileSync(path.join(dir, 'boekingsregels-laatste.json'), tekst, 'utf8');
+    const tekst = JSON.stringify(data, null, 1);
+    fs.writeFileSync(path.join(dir, `${naam}-laatste.json`), tekst, 'utf8');
     const d = new Date();
     const dag = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    fs.writeFileSync(path.join(dir, `boekingsregels-${dag}.json`), tekst, 'utf8');
+    fs.writeFileSync(path.join(dir, `${naam}-${dag}.json`), tekst, 'utf8');
     // Dagkopieën van de laatste 90 dagen bewaren.
-    const oud = fs.readdirSync(dir).filter((n) => /^boekingsregels-\d{4}-\d{2}-\d{2}\.json$/.test(n)).sort();
+    const re = new RegExp('^' + naam + '-\\d{4}-\\d{2}-\\d{2}\\.json$');
+    const oud = fs.readdirSync(dir).filter((n) => re.test(n)).sort();
     while (oud.length > 90) fs.unlinkSync(path.join(dir, oud.shift()));
     return { pad: dir, tijd: d.toISOString() };
   } catch (err) {
-    log('reservekopie: fout', err.message);
+    log('reservekopie: fout', soort, err.message);
     return { fout: err.message };
   }
 });
-ipcMain.on('toon-reservekopie', () => { const dir = KOPIE_MAP(); if (dir && fs.existsSync(dir)) shell.openPath(dir); });
+ipcMain.handle('lees-reservekopie', (e, soort) => {
+  const dir = KOPIE_MAP(soort);
+  if (!dir) return null;
+  const p = path.join(dir, `${KOPIE_MAPPEN[soort][1]}-laatste.json`);
+  try { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null; } catch (err) { return null; }
+});
+ipcMain.on('toon-reservekopie', () => { const d = dropboxMap(); const dir = d && path.join(d, 'Hoekje kantoor'); if (dir && fs.existsSync(dir)) shell.openPath(dir); });
 
 /* ---------- User-agent: gewone Chrome, zonder 'Electron' ---------- */
 const cleanUA = (ua) => ua.replace(/\s(Electron|hoekje-kantoor|HoekjeKantoor|Hoekje kantoor)\/\S+/gi, '');

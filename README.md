@@ -70,7 +70,8 @@ alleen lokaal in de instellingen, **nooit in deze openbare repo**. Gegevens: `lo
 Outlook wordt gedownload gaat via `window.grootboekLaadPdf` naar de Grootboek Sorteerder (instelling `gbAuto`).
 Elke 5 minuten leest het dashboard `localStorage['grootboek-sorteerder-leveranciers']` uit de Grootboek-webview en schrijft
 die (bij wijziging) naar `<Dropbox>/Hoekje kantoor/Grootboek boekingsregels/` (`boekingsregels-laatste.json` + één per dag,
-90 dagen). Dropbox-map uit `%LOCALAPPDATA%\Dropbox\info.json`. Formaat = de handmatige back-up van de Grootboek Sorteerder.
+90 dagen). Sinds v0.7.5 ook het geheugen van Betalen (`betaald`, `bekend`, `incasso`, `incassoAfzender`, `incassoPrefix`, `verwerkt`)
+in `<Dropbox>/Hoekje kantoor/Betalen/` (`betalen-laatste.json` + per dag); bij een lege installatie wordt dat automatisch teruggezet. Dropbox-map uit `%LOCALAPPDATA%\Dropbox\info.json`. Formaat = de handmatige back-up van de Grootboek Sorteerder.
 
 **Microsoft-koppeling (v0.7)**: Microsoft Graph met eigen app-registratie van de gebruiker (alleen persoonlijke
 Microsoft-accounts, platform "Openbare client", redirect `https://login.microsoftonline.com/common/oauth2/nativeclient`,

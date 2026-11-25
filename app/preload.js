@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('hoekje', {
   msKoppel: (id) => ipcRenderer.invoke('ms-koppel', id),
   msOntkoppel: () => ipcRenderer.invoke('ms-ontkoppel'),
   mailFacturen: (dagen) => ipcRenderer.invoke('mail-facturen', dagen),
-  reservekopie: (json) => ipcRenderer.invoke('reservekopie', json),
+  reservekopie: (json, soort) => ipcRenderer.invoke('reservekopie', json, soort),
+  leesReservekopie: (soort) => ipcRenderer.invoke('lees-reservekopie', soort),
   toonReservekopie: () => ipcRenderer.send('toon-reservekopie'),
 });

@@ -297,12 +297,14 @@ function initResize() {
 let laatsteKopie = '';
 async function maakReservekopie() {
   if (!window.hoekje || !window.hoekje.reservekopie) return;
+  // Geheugen van Betalen (betaald, incasso's, bekende rekeningnummers) ook bewaren.
+  if (typeof betalenReservekopie === 'function') { try { await betalenReservekopie(); } catch (e) {} }
   const wv = $('#gbMini webview');
   if (!wv || !wv.dataset.ready) return;
   try {
     const json = await wv.executeJavaScript("localStorage.getItem('grootboek-sorteerder-leveranciers')");
     if (!json || json === '[]' || json === laatsteKopie) return;
-    const r = await window.hoekje.reservekopie(json);
+    const r = await window.hoekje.reservekopie(json, 'grootboek');
     if (r.fout) { S.kopieStatus = 'Reservekopie mislukt: ' + r.fout; }
     else { laatsteKopie = json; S.kopieStatus = 'Laatste reservekopie in Dropbox: ' + new Date(r.tijd).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
     save();

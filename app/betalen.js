@@ -320,6 +320,7 @@ function markeerBetaald(r) {
   B.rijen = B.rijen.filter((x) => x !== r);
   betSave(); renderBetalen();
   $('#betMsg').textContent = (r.naam || 'Factuur') + ' staat als betaald genoteerd.';
+  betalenReservekopie();
 }
 function markeerIncasso(r) {
   const naam = (r.naam || (r.mail && r.mail.van) || 'Leverancier').trim();
@@ -329,6 +330,7 @@ function markeerIncasso(r) {
   B.rijen = B.rijen.filter((x) => x !== r && !isIncassant(x.iban, '', x.nummer, x.mail && x.mail.adres));
   betSave(); renderBetalen(); renderIncasso();
   $('#betMsg').textContent = 'Facturen van ' + naam + ' worden voortaan overgeslagen (incasso).';
+  betalenReservekopie();
 }
 function renderIncasso() {
   const ul = $('#incassoLijst');
@@ -443,6 +445,7 @@ async function maakBetaalbestand() {
   B.rijen = B.rijen.filter((r) => !rijen.includes(r));
   B.laatste = { pad: res.pad, naam, aantal: rijen.length, totaal: rijen.reduce((s, r) => s + Number(r.bedrag), 0) };
   betSave();
+  betalenReservekopie();
   msg.textContent = '';
   renderBetalen();
   renderKlaar();
@@ -481,6 +484,30 @@ function leesCsv(tekst) {
   }
   betSave();
   return n;
+}
+
+/* ---------- Reservekopie in Dropbox ---------- */
+let laatsteBetKopie = '';
+async function betalenReservekopie() {
+  if (!api || !api.reservekopie) return;
+  const json = JSON.stringify({ versie: 1, datum: new Date().toISOString(), betaald: B.betaald, bekend: B.bekend, incasso: B.incasso, incassoAfzender: B.incassoAfzender, incassoPrefix: B.incassoPrefix, verwerkt: B.verwerkt });
+  if (json.replace(/"datum":"[^"]*"/, '') === laatsteBetKopie) return;
+  const r = await api.reservekopie(json, 'betalen');
+  if (!r.fout) laatsteBetKopie = json.replace(/"datum":"[^"]*"/, '');
+}
+// Nieuwe of gewiste computer: het geheugen van Betalen vanzelf terugzetten uit Dropbox.
+async function betalenHerstel() {
+  if (!api || !api.leesReservekopie) return;
+  const leeg = !Object.keys(B.betaald).length && !Object.keys(B.bekend).length && !Object.keys(B.incasso || {}).length;
+  if (!leeg) return;
+  const json = await api.leesReservekopie('betalen');
+  if (!json) return;
+  try {
+    const d = JSON.parse(json);
+    for (const k of ['betaald', 'bekend', 'incasso', 'incassoAfzender', 'incassoPrefix', 'verwerkt']) if (d[k]) B[k] = Object.assign({}, d[k], B[k]);
+    betSave(); renderBetalen(); renderIncasso();
+    $('#betMsg').textContent = 'Wat je eerder betaalde en welke leveranciers incasseren is teruggezet uit Dropbox.';
+  } catch (e) {}
 }
 
 /* ---------- Rabobank naast Betalen ---------- */
@@ -572,6 +599,7 @@ function initBetalen() {
   $('#betRabo').onclick = () => { laadRabo(); const p = $('#betRaboPanel'); p.classList.add('flash'); setTimeout(() => p.classList.remove('flash'), 1200); };
   $('#betSluit').onclick = () => { B.laatste = null; betSave(); renderKlaar(); };
   initBetSplit();
+  betalenHerstel();
   renderBetalen();
   renderKlaar();
   renderIncasso();
