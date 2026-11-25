@@ -175,3 +175,37 @@ select{height:40px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px;bac
 .betalen table{min-width:820px}
 
 .panel.flash{outline:3px solid #2456C8;outline-offset:2px;transition:outline-color .3s}
+
+/* Rechterkolom: to do, Grootboek, rekenmachine + muziek naast elkaar */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:0 0 auto}
+.duo .calc{padding:10px;gap:6px}
+.duo .calc output{height:38px;line-height:36px;font-size:19px}
+.duo .keys{gap:4px}
+.duo .key{height:30px;font-size:14px;border-radius:6px}
+.duo .music{padding:10px;gap:6px}
+.duo .music .row{flex-wrap:wrap}
+.duo .music .chip{flex:1 1 100%;min-height:34px}
+.duo .play{width:38px;height:38px}
+.todo{flex:2 1 0;min-height:240px}
+.todo-lijst{list-style:none;margin:0;padding:4px 8px;overflow:auto;flex:1 1 0;min-height:0}
+.todo-lijst li{display:flex;align-items:flex-start;gap:8px;padding:7px 4px;border-bottom:1px solid #EEF1F5}
+.todo-lijst li:last-child{border-bottom:0}
+.todo-lijst input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:#2456C8;flex:0 0 18px}
+.todo-lijst .t{flex:1;min-width:0;font-size:13px;line-height:1.35}
+.todo-lijst .t button.link{all:unset;cursor:pointer;color:#18202B}
+.todo-lijst .t button.link:hover,.todo-lijst .t button.link:focus-visible{text-decoration:underline;color:#2456C8}
+.todo-lijst .meta{display:block;font-size:11px;color:#4A5361}
+.todo-lijst .auto .meta::before{content:"automatisch · "}
+.todo-lijst .laat .meta,.todo-lijst .laat .t{color:#B34D4D}
+.todo-lijst .vandaag .meta{color:#2456C8;font-weight:600}
+.todo-lijst .klaar .t{color:#8D97A5;text-decoration:line-through}
+.todo-lijst .icon{width:28px;height:28px;flex:0 0 28px;opacity:.5}
+.todo-lijst li:hover .icon{opacity:1}
+.todo-lijst .kop{font-size:11px;font-weight:700;color:#4A5361;text-transform:uppercase;letter-spacing:.04em;border:0;padding:10px 4px 2px}
+.todo-nieuw{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-top:1px solid #E4E8EE}
+.todo-nieuw input[type=text]{flex:1 1 100%;min-width:0;height:36px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px}
+.todo-nieuw input[type=date]{flex:1 1 0;min-width:0;height:36px;padding:0 6px;border:1px solid #C4CCD6;border-radius:8px;color:#4A5361}
+.todo-nieuw .btn{min-height:36px;width:36px;padding:0;justify-content:center;font-size:18px}
+
+.duo .music input[type=range]{width:100%;min-width:0}
+.duo .music .row label{flex:0 0 100%}

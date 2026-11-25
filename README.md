@@ -57,8 +57,15 @@ Veiligheid: een rekeningnummer dat niet bekend is (eerder betaald of uit een ing
 aangevinkt; facturen die al in een eerder betaalbestand zaten worden gemarkeerd. Eigen rekening (naam, IBAN, BIC) staat
 alleen lokaal in de instellingen, **nooit in deze openbare repo**. Gegevens: `localStorage` `hoekje-kantoor-betalen`.
 
+**To-do (v0.8, `app/todo.js`)**: rechterkolom op het overzicht. Eigen taken (tekst + optionele datum, afvinken, verwijderen;
+afgeronde taken een week zichtbaar) en automatische taken uit Betalen (facturen te betalen met eerste uitvoerdatum,
+betaalbestand nog tekenen, fout in de mailkoppeling) en de reservekopie. Een automatische taak afvinken verbergt hem tot
+de situatie verandert (`weg[key] = signatuur`). Op de achtergrond elk uur zoeken in de mail. Opslag `localStorage`
+`hoekje-kantoor-todo`, eigen taken gaan mee in de Betalen-reservekopie. Rekenmachine en muziek staan nu naast elkaar.
+
 ## Nog te bouwen (zie ontwerp)
-1. Klembord (gedownloade/gekopieerde bestanden slepen tussen onderdelen).
+1. Klembord (wens van Jasmijn, 25-11): een **brede balk bovenaan** (niet aan de zijkant) met per item: slepen, kopiëren,
+   verwijderen en **opslaan in Dropbox**. Items: gedownloade bestanden (pdf's uit Outlook, betaalbestanden), gekopieerde tekst.
 2. Alle Windows-meldingen dempen zolang de app open is.
 3. Afschrijvingen (Rabobank-CSV) koppelen aan factuurmails; ontbrekende facturen opvragen via concept-mails
    (e-mailadres zoeken: eerst eerdere mails, dan internet); "geen factuur nodig" per tegenpartij onthouden.

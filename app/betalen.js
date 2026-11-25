@@ -12,7 +12,7 @@ function betLoad() {
 let B = betLoad();
 // Eerste versie markeerde onleesbare mailbijlagen als verwerkt: één keer opnieuw laten zoeken.
 if (!B.v071) { B.verwerkt = {}; B.laatsteMailZoek = 0; B.v071 = true; }
-function betSave() { try { localStorage.setItem(BET_STORE, JSON.stringify(B)); } catch (e) {} }
+function betSave() { try { localStorage.setItem(BET_STORE, JSON.stringify(B)); } catch (e) {} window.dispatchEvent(new Event('hoekje-data')); }
 
 /* ---------- Hulpjes ---------- */
 const euro = (n) => '€ ' + (Number(n) || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -491,7 +491,7 @@ function leesCsv(tekst) {
 let laatsteBetKopie = '';
 async function betalenReservekopie() {
   if (!api || !api.reservekopie) return;
-  const json = JSON.stringify({ versie: 1, datum: new Date().toISOString(), betaald: B.betaald, bekend: B.bekend, incasso: B.incasso, incassoAfzender: B.incassoAfzender, incassoPrefix: B.incassoPrefix, verwerkt: B.verwerkt });
+  const json = JSON.stringify({ versie: 1, datum: new Date().toISOString(), betaald: B.betaald, bekend: B.bekend, incasso: B.incasso, incassoAfzender: B.incassoAfzender, incassoPrefix: B.incassoPrefix, verwerkt: B.verwerkt, todo: (typeof T !== 'undefined' ? T.taken : undefined) });
   if (json.replace(/"datum":"[^"]*"/, '') === laatsteBetKopie) return;
   const r = await api.reservekopie(json, 'betalen');
   if (!r.fout) laatsteBetKopie = json.replace(/"datum":"[^"]*"/, '');
@@ -506,6 +506,7 @@ async function betalenHerstel() {
   try {
     const d = JSON.parse(json);
     for (const k of ['betaald', 'bekend', 'incasso', 'incassoAfzender', 'incassoPrefix', 'verwerkt']) if (d[k]) B[k] = Object.assign({}, d[k], B[k]);
+    if (Array.isArray(d.todo) && typeof T !== 'undefined' && T.taken.length <= 4) { T.taken = d.todo; T.gestart = true; todoSave(); renderTodo(); }
     betSave(); renderBetalen(); renderIncasso();
     $('#betMsg').textContent = 'Wat je eerder betaalde en welke leveranciers incasseren is teruggezet uit Dropbox.';
   } catch (e) {}
@@ -568,7 +569,8 @@ async function zoekInMail(stil) {
   msg.textContent = 'Bezig met zoeken in je mail…';
   const res = await api.mailFacturen(S.mailDagen || 30);
   knop.disabled = false;
-  if (res.fout) { msg.textContent = 'Zoeken in de mail lukte niet: ' + res.fout; return; }
+  if (res.fout) { msg.textContent = 'Zoeken in de mail lukte niet: ' + res.fout; B.mailFout = res.fout; betSave(); return; }
+  B.mailFout = '';
   B.laatsteMailZoek = Date.now();
   const nieuw = res.bijlagen.filter((b) => !B.verwerkt[b.sleutel]);
   if (!nieuw.length) { msg.textContent = `${res.mails} mails met bijlagen bekeken, geen nieuwe facturen.`; betSave(); return; }

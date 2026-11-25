@@ -54,10 +54,19 @@
         <div class="gutter" data-gutter="1" role="separator" aria-orientation="vertical" aria-label="Breedte Outlook en rechterkolom aanpassen" tabindex="0" title="Sleep om de breedte aan te passen (dubbelklik: standaard)"></div>
 
         <div class="col">
-          <section class="panel calc" aria-label="Rekenmachine">
-            <h2>Rekenmachine</h2>
-            <output id="calcOut" aria-live="polite">0</output>
-            <div class="keys" id="calcKeys"></div>
+          <section class="panel todo" id="todoPanel" aria-label="To do">
+            <div class="panel-head">
+              <h2>To do</h2>
+              <span class="small" id="todoTel"></span>
+            </div>
+            <ul class="todo-lijst" id="todoLijst"></ul>
+            <form class="todo-nieuw" id="todoForm">
+              <label class="sr" for="todoTekst">Nieuwe taak</label>
+              <input id="todoTekst" type="text" placeholder="Nieuwe taak…" autocomplete="off">
+              <label class="sr" for="todoDatum">Datum (niet verplicht)</label>
+              <input id="todoDatum" type="date" title="Datum (niet verplicht)">
+              <button class="btn primary" type="submit" aria-label="Taak toevoegen">+</button>
+            </form>
           </section>
 
           <section class="panel grow" id="gbPanel" aria-label="Grootboek Sorteerder">
@@ -70,7 +79,13 @@
             <div class="pane" id="gbMini"></div>
           </section>
 
-          <section class="panel music" aria-label="Muziek">
+          <div class="duo">
+            <section class="panel calc" aria-label="Rekenmachine">
+            <h2>Rekenmachine</h2>
+            <output id="calcOut" aria-live="polite">0</output>
+            <div class="keys" id="calcKeys"></div>
+          </section>
+            <section class="panel music" aria-label="Muziek">
             <h2>Muziek</h2>
             <div class="row">
               <button class="play" id="playBtn" aria-label="Afspelen">
@@ -86,6 +101,7 @@
             <p class="small err" id="musicMsg" hidden></p>
             <audio id="audio" preload="none"></audio>
           </section>
+          </div>
         </div>
       </div>
     </section>
@@ -265,5 +281,6 @@
 <div class="toast" id="toast" role="status" hidden></div>
 <script src="app.js"></script>
 <script src="betalen.js"></script>
+<script src="todo.js"></script>
 </body>
 </html>

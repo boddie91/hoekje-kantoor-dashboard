@@ -20,7 +20,7 @@ const DEFAULTS = {
   focus: '',
   musicSource: 'radio2',
   volume: 40,
-  cols: [3, 2, 1.3],
+  cols: [3, 2, 1.7],
   gbAuto: true,
   msClientId: '',
   mailDagen: 30,
@@ -42,6 +42,8 @@ function load() {
   return structuredClone(DEFAULTS);
 }
 let S = load();
+// Rechterkolom is breder geworden (to-do-lijst): oude standaardbreedte omzetten.
+if (Array.isArray(S.cols) && S.cols.join() === '3,2,1.3') S.cols = [3, 2, 1.7];
 function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 
 const $ = (sel, root = document) => root.querySelector(sel);
