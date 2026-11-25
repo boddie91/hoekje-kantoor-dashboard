@@ -21,6 +21,12 @@ const DEFAULTS = {
   musicSource: 'radio2',
   volume: 40,
   cols: [3, 2, 1.3],
+  betaalNaam: '',
+  betaalIban: '',
+  betaalBic: 'RABONL2U',
+  betaalModus: 'voor',
+  betaalDagen: 2,
+  betaalTermijn: 14,
   exactRatio: 0.5,
 };
 
@@ -52,6 +58,7 @@ const ICON = {
   browser: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
   outlook: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   grootboek: '<svg viewBox="0 0 24 24"><path d="M4 6h10"/><path d="M4 12h7"/><path d="M4 18h4"/><path d="M17 5v14"/><path d="M13.5 15.5L17 19l3.5-3.5"/></svg>',
+  euro: '<svg viewBox="0 0 24 24"><path d="M18 6.5A7 7 0 1 0 18 17.5"/><path d="M4 10h9"/><path d="M4 14h9"/></svg>',
   instellingen: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
   fwd: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
@@ -140,8 +147,9 @@ function show(id) {
   document.querySelectorAll('#sidebar .nav').forEach((b) => {
     if (b.dataset.view === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  const t = { overzicht: 'Overzicht', instellingen: 'Instellingen' }[id] || FOCUS[id] || (fullViews[id] && fullViews[id].title) || '';
+  const t = { overzicht: 'Overzicht', instellingen: 'Instellingen', betalen: 'Betalen' }[id] || FOCUS[id] || (fullViews[id] && fullViews[id].title) || '';
   $('#title').textContent = t;
+  if (id === 'betalen' && typeof betalenGetoond === 'function') betalenGetoond();
 }
 
 function open(id) {
@@ -169,6 +177,7 @@ function renderSidebar() {
     item('browser', 'Browser', ICON.browser),
     item('outlook', 'Outlook', ICON.outlook),
     item('grootboek', 'Grootboek Sorteerder', ICON.grootboek),
+    item('betalen', 'Betalen', ICON.euro),
     el('div', { class: 'sep', 'aria-hidden': 'true' }),
   );
   for (const t of S.tabs) {
@@ -360,9 +369,12 @@ function initMusic() {
 function renderSettings() {
   document.querySelectorAll('#view-instellingen [data-key]').forEach((inp) => {
     const k = inp.dataset.key;
-    if (inp.type === 'checkbox') inp.checked = !!S[k]; else inp.value = S[k] || '';
+    if (inp.type === 'checkbox') inp.checked = !!S[k]; else inp.value = S[k] == null ? '' : S[k];
     inp.onchange = () => {
-      S[k] = inp.type === 'checkbox' ? inp.checked : normUrl(inp.value);
+      if (inp.type === 'checkbox') S[k] = inp.checked;
+      else if (inp.type === 'url') S[k] = normUrl(inp.value);
+      else if (inp.type === 'number') S[k] = Math.max(0, parseInt(inp.value, 10) || 0);
+      else S[k] = inp.value.trim();
       if (inp.type !== 'checkbox') inp.value = S[k];
       save();
       if (k === 'exactLeft') reload('exactLeft');

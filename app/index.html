@@ -90,6 +90,65 @@
       </div>
     </section>
 
+    <!-- BETALEN -->
+    <section class="view scroll" id="view-betalen" aria-label="Betalen">
+      <div class="betalen">
+        <section class="card" aria-labelledby="h-bet-in">
+          <div class="row between">
+            <h2 id="h-bet-in">Facturen toevoegen</h2>
+            <label class="btn small-btn">Rabobank-CSV inlezen<input type="file" id="betCsv" accept=".csv" hidden></label>
+          </div>
+          <div class="bet-in">
+            <div class="drop" id="betDrop">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/></svg>
+              <strong>Sleep factuur-pdf's hierheen</strong>
+              <span class="small">of een Rabobank-CSV, zodat het dashboard eerdere rekeningnummers kent</span>
+              <button class="btn" id="betKies">Pdf's kiezen</button>
+            </div>
+            <div class="recent">
+              <h3>Nieuw in Downloads</h3>
+              <ul id="betRecent"></ul>
+            </div>
+          </div>
+          <p class="small" id="betMsg" role="status"></p>
+        </section>
+
+        <section class="card klaar" id="betKlaar" role="status" hidden>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>
+          <div class="grow">
+            <strong>Betaalbestand gemaakt</strong>
+            <p class="small" id="betKlaarTekst"></p>
+          </div>
+          <div class="chip-file" id="betSleep" draggable="true" title="Sleep dit bestand naar Rabobank">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+            Sleep naar Rabobank
+          </div>
+          <button class="btn" id="betToon">Toon in map</button>
+          <button class="btn primary" id="betRabo">Naar Rabobank</button>
+          <button class="icon" id="betSluit" aria-label="Melding sluiten"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg></button>
+        </section>
+
+        <section class="card" aria-labelledby="h-bet-lijst">
+          <div class="row between">
+            <h2 id="h-bet-lijst">Te betalen</h2>
+            <button class="btn" id="betAlles">Alles aanvinken wat veilig is</button>
+          </div>
+          <p class="small" id="betEmpty">Nog geen facturen. Voeg hierboven pdf's toe.</p>
+          <div class="tablewrap" id="betTable" hidden>
+            <table>
+              <thead><tr><th><span class="sr">Meenemen</span></th><th>Leverancier</th><th class="num">Bedrag</th><th>Uitvoerdatum</th><th>Rekeningnummer</th><th><span class="sr">Acties</span></th></tr></thead>
+              <tbody id="betRows"></tbody>
+            </table>
+          </div>
+          <div class="betfoot">
+            <div><span class="small">Aangevinkt</span><br><strong id="betTotaal">0 betalingen · € 0,00</strong></div>
+            <button class="btn primary big" id="betMaak" disabled>Betaalbestand maken</button>
+          </div>
+        </section>
+        <p class="small">Het dashboard betaalt nooit zelf. Het bestand importeer je in Rabobank; daar controleer en teken je de betalingen. Een nieuw rekeningnummer wordt nooit vanzelf aangevinkt.</p>
+      </div>
+    </section>
+
     <!-- INSTELLINGEN -->
     <section class="view scroll" id="view-instellingen" aria-label="Instellingen">
       <div class="settings">
@@ -109,6 +168,27 @@
             <label>Startpagina rechterhelft<input data-key="exactRight" type="url"></label>
           </div>
           <label class="check"><input data-key="exactSplit" type="checkbox"> Openen in gesplitst scherm</label>
+        </section>
+
+        <section class="card">
+          <h2>Betalen</h2>
+          <p class="small">Gegevens van jullie eigen rekening voor het betaalbestand. Deze blijven alleen op deze computer.</p>
+          <div class="fields">
+            <label>Naam rekeninghouder (zoals bij de bank)<input data-key="betaalNaam" type="text" placeholder="Bijv. de naam op je rekeningafschrift"></label>
+            <label>Eigen rekeningnummer (IBAN)<input data-key="betaalIban" type="text" placeholder="NL.. RABO ...."></label>
+            <label>BIC<input data-key="betaalBic" type="text"></label>
+          </div>
+          <div class="fields">
+            <label>Standaard betalen
+              <select data-key="betaalModus">
+                <option value="voor">Een paar werkdagen vóór de uiterste datum</option>
+                <option value="op">Op de uiterste datum</option>
+                <option value="direct">Zo snel mogelijk</option>
+              </select>
+            </label>
+            <label>Aantal werkdagen ervoor<input data-key="betaalDagen" type="number" min="0" max="20"></label>
+            <label>Termijn als de factuur er niets over zegt (dagen)<input data-key="betaalTermijn" type="number" min="0" max="120"></label>
+          </div>
         </section>
 
         <section class="card">
@@ -145,5 +225,6 @@
   </div>
 </div>
 <script src="app.js"></script>
+<script src="betalen.js"></script>
 </body>
 </html>

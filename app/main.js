@@ -1,4 +1,5 @@
-const { app, BrowserWindow, session, shell, ipcMain, net } = require('electron');
+const { app, BrowserWindow, session, shell, ipcMain, net, dialog, nativeImage } = require('electron');
+const { pathToFileURL } = require('url');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -78,6 +79,73 @@ async function checkUpdate() {
 ipcMain.handle('zoek-update', () => checkUpdate());
 ipcMain.handle('versie', () => app.getVersion());
 ipcMain.on('herstart', () => { app.relaunch(); app.exit(0); });
+
+/* ---------- Betalen: pdf's lezen en betaalbestanden bewaren ---------- */
+let pdfjs = null;
+async function loadPdfjs() {
+  if (pdfjs) return pdfjs;
+  // pdf.js verwacht deze browseronderdelen; voor alleen tekst lezen volstaat een eenvoudige versie.
+  if (!globalThis.DOMMatrix) globalThis.DOMMatrix = class DOMMatrix { constructor(i) { const a = Array.isArray(i) ? i : [1, 0, 0, 1, 0, 0]; [this.a, this.b, this.c, this.d, this.e, this.f] = a; } };
+  if (!globalThis.Path2D) globalThis.Path2D = class Path2D {};
+  pdfjs = await import(pathToFileURL(path.join(__dirname, 'pdf.min.mjs')).href);
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(__dirname, 'pdf.worker.min.mjs')).href;
+  return pdfjs;
+}
+const isPdf = (p) => typeof p === 'string' && /\.pdf$/i.test(p) && fs.existsSync(p);
+const isOwnFile = (p) => typeof p === 'string' && /\.(pdf|xml)$/i.test(p) && fs.existsSync(p);
+
+ipcMain.handle('pdf-tekst', async (e, file) => {
+  if (!isPdf(file)) return { fout: 'Geen pdf-bestand' };
+  try {
+    const lib = await loadPdfjs();
+    const data = new Uint8Array(fs.readFileSync(file));
+    const doc = await lib.getDocument({ data, isEvalSupported: false, verbosity: 0 }).promise;
+    let tekst = '';
+    for (let p = 1; p <= Math.min(doc.numPages, 4); p++) {
+      const tc = await (await doc.getPage(p)).getTextContent();
+      tekst += tc.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
+    }
+    await doc.destroy();
+    return { tekst };
+  } catch (err) {
+    log('pdf: fout', path.basename(file), err.message);
+    return { fout: err.message };
+  }
+});
+
+ipcMain.handle('recente-pdfs', () => {
+  const dir = app.getPath('downloads');
+  const grens = Date.now() - 30 * 24 * 3600 * 1000;
+  try {
+    return fs.readdirSync(dir)
+      .filter((n) => /\.pdf$/i.test(n))
+      .map((n) => { const p = path.join(dir, n); const s = fs.statSync(p); return { naam: n, pad: p, tijd: s.mtimeMs, grootte: s.size }; })
+      .filter((x) => x.tijd > grens)
+      .sort((a, b) => b.tijd - a.tijd)
+      .slice(0, 40);
+  } catch (err) { return []; }
+});
+
+ipcMain.handle('kies-pdfs', async () => {
+  const r = await dialog.showOpenDialog(win, { title: "Facturen kiezen", defaultPath: app.getPath('downloads'), properties: ['openFile', 'multiSelections'], filters: [{ name: "Pdf's", extensions: ['pdf'] }] });
+  return r.canceled ? [] : r.filePaths;
+});
+
+ipcMain.handle('bewaar-betaalbestand', (e, xml, naam) => {
+  const veilig = String(naam).replace(/[^\w.-]/g, '_');
+  if (!/\.xml$/.test(veilig) || typeof xml !== 'string') return { fout: 'Ongeldig bestand' };
+  const p = path.join(app.getPath('downloads'), veilig);
+  fs.writeFileSync(p, xml, 'utf8');
+  log('betaalbestand bewaard', veilig);
+  return { pad: p };
+});
+
+ipcMain.on('toon-bestand', (e, p) => { if (isOwnFile(p)) shell.showItemInFolder(p); });
+ipcMain.on('open-bestand', (e, p) => { if (isPdf(p)) shell.openPath(p); });
+ipcMain.on('sleep-bestand', (e, p) => {
+  if (!isOwnFile(p)) return;
+  e.sender.startDrag({ file: p, icon: nativeImage.createFromPath(path.join(__dirname, 'icon.ico')).resize({ width: 32, height: 32 }) });
+});
 
 /* ---------- User-agent: gewone Chrome, zonder 'Electron' ---------- */
 const cleanUA = (ua) => ua.replace(/\s(Electron|hoekje-kantoor|HoekjeKantoor|Hoekje kantoor)\/\S+/gi, '');

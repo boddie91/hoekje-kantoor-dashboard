@@ -42,18 +42,27 @@ Ontwerp (alle schermen, ook wat nog gebouwd moet worden): https://claude.ai/arti
 4. Vanuit de sandbox is de app nooit echt gestart: wees eerlijk over wat getest is en vraag de gebruiker om te testen.
    Bij problemen: vraag toegang tot `%LOCALAPPDATA%\HoekjeKantoor` en lees `app-log.txt`.
 
-## Gebouwd (v0.4)
+## Gebouwd (v0.5)
 Zijbalk, Exact Online met gesplitst scherm, Outlook, Grootboek Sorteerder (https://boddie91.github.io/grootboek-sorteerder/),
 rekenmachine, Radio 2/focus-muziek, website-tabbladen (Rabobank, Mijn KPN, Exact, Dropbox, Kassa), instellingenpagina,
 versleepbare tegelbreedtes, automatisch bijwerken.
+
+**Betalen (v0.5, `app/betalen.js`)**: factuur-pdf's slepen/kiezen of uit "Nieuw in Downloads" (laatste 30 dagen) →
+tekst lezen in het hoofdproces met pdf.js (`pdf.min.mjs` + `pdf.worker.min.mjs`, legacy build 6.2.108, Apache-2.0, zie `LICENSE-pdfjs.txt`;
+in Node is een eenvoudige `DOMMatrix`-vervanger nodig) → leverancier, IBAN (mod-97), bedrag, factuurnummer, factuur-/vervaldatum,
+termijn, betalingskenmerk en incasso herkennen → uitvoerdatum per factuur (uiterste datum, of factuurdatum + termijn,
+of standaardtermijn; N werkdagen eerder; weekend/TARGET-feestdagen overgeslagen) → pain.001.001.03 met één `PmtInf` per
+uitvoerdatum, opgeslagen in Downloads; als bestand naar Rabobank te slepen (`startDrag`).
+Veiligheid: een rekeningnummer dat niet bekend is (eerder betaald of uit een ingelezen Rabobank-CSV) wordt nooit vanzelf
+aangevinkt; facturen die al in een eerder betaalbestand zaten worden gemarkeerd. Eigen rekening (naam, IBAN, BIC) staat
+alleen lokaal in de instellingen, **nooit in deze openbare repo**. Gegevens: `localStorage` `hoekje-kantoor-betalen`.
 
 ## Nog te bouwen (zie ontwerp)
 1. Klembord (gedownloade/gekopieerde bestanden slepen tussen onderdelen).
 2. Alle Windows-meldingen dempen zolang de app open is.
 3. Afschrijvingen (Rabobank-CSV) koppelen aan factuurmails; ontbrekende facturen opvragen via concept-mails
    (e-mailadres zoeken: eerst eerdere mails, dan internet); "geen factuur nodig" per tegenpartij onthouden.
-4. Betalen: te betalen facturen uit de mail → betaalbestand pain.001.001.03 met uitvoerdatum per factuur
-   (uiterste datum / termijn / standaard), nieuw IBAN rood en nooit vanzelf aangevinkt, bestand naar het klembord.
+4. Betalen uitbreiden: facturen rechtstreeks uit de mailbox halen in plaats van via Downloads; klembord.
 5. Facturenoverzicht met status per factuur; teller op de knop Betalen; archiveren in Dropbox per kwartaal.
 6. Instellingen naar Supabase.
 

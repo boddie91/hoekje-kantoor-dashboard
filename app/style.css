@@ -1,3 +1,4 @@
+[hidden]{display:none !important}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden}
 body{font-family:"Segoe UI",Inter,system-ui,sans-serif;font-size:14px;line-height:1.4;color:#18202B;background:#EEF1F5}
@@ -107,3 +108,43 @@ body.dragging webview{pointer-events:none}
 .grid[data-focus="outlook"]>:not(#outlookPanel),
 .grid[data-focus="grootboek"]>:not(.col),
 .grid[data-focus="grootboek"] .col>:not(#gbPanel){display:none !important}
+
+/* ---------- Betalen ---------- */
+.betalen{max-width:1240px;width:100%;display:flex;flex-direction:column;gap:16px}
+.row.between{justify-content:space-between}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.small-btn{min-height:36px;font-size:13px;cursor:pointer}
+.bet-in{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,1fr);gap:16px}
+.drop{border:2px dashed #C4CCD6;border-radius:12px;background:#F5F7FA;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;text-align:center}
+.drop svg{width:36px;height:36px;color:#4A5361}
+.drop.over{border-color:#2456C8;background:#F0F4FC}
+.recent h3{margin:0 0 6px;font-size:13px;font-weight:700;color:#4A5361}
+.recent ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:190px;overflow:auto}
+.pick{width:100%;display:flex;align-items:center;gap:8px;min-height:36px;padding:0 10px;border:1px solid #D8DEE6;border-radius:8px;background:#fff;color:#18202B;cursor:pointer;text-align:left}
+.pick:hover{border-color:#2456C8;background:#F0F4FC}
+.pick .plus{width:20px;height:20px;border-radius:10px;background:#2456C8;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 20px}
+.pick .fn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tablewrap{overflow-x:auto}
+.betalen table{width:100%;border-collapse:collapse;min-width:960px}
+.betalen th{text-align:left;font-size:12px;font-weight:700;color:#4A5361;padding:8px;border-bottom:1px solid #D8DEE6;background:#F5F7FA}
+.betalen td{padding:8px;border-bottom:1px solid #E4E8EE;vertical-align:top}
+.betalen tr.on td{background:#F7FAFF}
+.betalen td input[type=text],.betalen td input[type=date]{height:36px;padding:0 8px;border:1px solid #C4CCD6;border-radius:6px;font:inherit;width:100%;background:#fff;color:#18202B}
+.betalen td input.mini{height:28px;width:150px;font-size:12px;display:inline-block}
+.betalen td input.mono{font-family:Consolas,ui-monospace,monospace;font-size:13px}
+.betalen td input[type=checkbox]{width:20px;height:20px;margin-top:8px;accent-color:#2456C8}
+.betalen .num{text-align:right}
+.betalen td.num input{text-align:right;max-width:120px}
+.betalen .sub{font-size:12px;color:#4A5361;margin-top:4px}
+.betalen .sub.ok{color:#3D6B5C;font-weight:600}
+.betalen .sub.bad,.betalen .tag.bad{color:#B34D4D;font-weight:600}
+.betalen .tag{display:inline-block;margin:4px 6px 0 0;font-size:12px;color:#4A5361;background:#EEF1F5;border-radius:6px;padding:2px 8px}
+.betalen .acts{white-space:nowrap}
+.betfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid #E4E8EE}
+.btn.big{min-height:48px;padding:0 22px;font-size:15px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.klaar{flex-direction:row;flex-wrap:wrap;align-items:center;border:2px solid #3D6B5C}
+.klaar>svg{width:24px;height:24px;color:#3D6B5C}
+.klaar .grow{flex:1 1 240px}
+.chip-file{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:2px solid #2456C8;border-radius:8px;background:#F0F4FC;font-weight:600;cursor:grab}
+select{height:40px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px;background:#fff;color:#18202B;font-weight:400}
