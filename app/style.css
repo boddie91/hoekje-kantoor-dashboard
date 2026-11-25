@@ -163,3 +163,7 @@ select{height:40px;padding:0 10px;border:1px solid #C4CCD6;border-radius:8px;bac
 .incasso li{display:flex;align-items:center;gap:12px;padding:4px 0;border-bottom:1px solid #E4E8EE}
 .incasso li .fn{flex:1;font-weight:600}
 .mono{font-family:Consolas,ui-monospace,monospace}
+
+.betalen td input.mini.wide{width:240px}
+
+.bad-msg{color:#B34D4D;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}

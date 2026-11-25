@@ -91,6 +91,19 @@ async function loadPdfjs() {
   pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(__dirname, 'pdf.worker.min.mjs')).href;
   return pdfjs;
 }
+// Tekst per regel opbouwen op basis van de positie op de pagina (zoals een mens hem leest).
+function regels(items) {
+  const rows = [];
+  for (const it of items) {
+    if (!it.str || !it.str.trim()) continue;
+    const x = it.transform[4], y = it.transform[5], h = Math.abs(it.transform[3]) || 8;
+    let row = rows.find((r) => Math.abs(r.y - y) < Math.max(2, h * 0.4));
+    if (!row) { row = { y, items: [] }; rows.push(row); }
+    row.items.push({ x, s: it.str });
+  }
+  rows.sort((a, b) => b.y - a.y);
+  return rows.map((r) => r.items.sort((a, b) => a.x - b.x).map((i) => i.s.trim()).join('  ')).join('\n');
+}
 const isPdf = (p) => typeof p === 'string' && /\.pdf$/i.test(p) && fs.existsSync(p);
 const isOwnFile = (p) => typeof p === 'string' && /\.(pdf|xml)$/i.test(p) && fs.existsSync(p);
 
@@ -105,7 +118,7 @@ ipcMain.handle('pdf-tekst', async (e, file) => {
       let tekst = '';
       for (let p = 1; p <= Math.min(doc.numPages, 4); p++) {
         const tc = await (await doc.getPage(p)).getTextContent();
-        tekst += tc.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
+        tekst += regels(tc.items) + '\n';
       }
       return { tekst };
     } finally {
