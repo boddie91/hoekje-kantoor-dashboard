@@ -63,30 +63,17 @@ betaalbestand nog tekenen, fout in de mailkoppeling) en de reservekopie. Een aut
 de situatie verandert (`weg[key] = signatuur`). Op de achtergrond elk uur zoeken in de mail. Opslag `localStorage`
 `hoekje-kantoor-todo`, eigen taken gaan mee in de Betalen-reservekopie. Rekenmachine en muziek staan nu naast elkaar.
 
-## Nog te bouwen (zie ontwerp)
-1. Klembord (wens van Jasmijn, 25-11): een **brede balk bovenaan** (niet aan de zijkant) met per item: slepen, kopiëren,
-   verwijderen en **opslaan in Dropbox**. Items: gedownloade bestanden (pdf's uit Outlook, betaalbestanden), gekopieerde tekst.
-2. Alle Windows-meldingen dempen zolang de app open is.
-3. Afschrijvingen (Rabobank-CSV) koppelen aan factuurmails; ontbrekende facturen opvragen via concept-mails
-   (e-mailadres zoeken: eerst eerdere mails, dan internet); "geen factuur nodig" per tegenpartij onthouden.
-4. Betalen uitbreiden: facturen rechtstreeks uit de mailbox halen in plaats van via Downloads; klembord.
-5. Facturenoverzicht met status per factuur; teller op de knop Betalen; archiveren in Dropbox per kwartaal.
-6. Instellingen naar Supabase.
-
-**Grootboek Sorteerder-koppeling (v0.5.1/v0.6)**: downloads uit websites gaan zonder venster naar Downloads; een pdf die in
-Outlook wordt gedownload gaat via `window.grootboekLaadPdf` naar de Grootboek Sorteerder (instelling `gbAuto`).
-Elke 5 minuten leest het dashboard `localStorage['grootboek-sorteerder-leveranciers']` uit de Grootboek-webview en schrijft
-die (bij wijziging) naar `<Dropbox>/Hoekje kantoor/Grootboek boekingsregels/` (`boekingsregels-laatste.json` + één per dag,
-90 dagen). Sinds v0.7.5 ook het geheugen van Betalen (`betaald`, `bekend`, `incasso`, `incassoAfzender`, `incassoPrefix`, `verwerkt`)
-in `<Dropbox>/Hoekje kantoor/Betalen/` (`betalen-laatste.json` + per dag); bij een lege installatie wordt dat automatisch teruggezet. Dropbox-map uit `%LOCALAPPDATA%\Dropbox\info.json`. Formaat = de handmatige back-up van de Grootboek Sorteerder.
-
-**Microsoft-koppeling (v0.7)**: Microsoft Graph met eigen app-registratie van de gebruiker (alleen persoonlijke
-Microsoft-accounts, platform "Openbare client", redirect `https://login.microsoftonline.com/common/oauth2/nativeclient`,
-gedelegeerde rechten `Mail.Read`, `User.Read`, `offline_access`). Client-id staat in de instellingen (`msClientId`, niet geheim).
-PKCE-inlog in een modaal venster; vernieuwingssleutel versleuteld (safeStorage) in `%LOCALAPPDATA%\HoekjeKantoor\microsoft.bin`.
-`mail-facturen` zoekt mails met bijlagen van de laatste `mailDagen` dagen (max. 300 mails), downloadt pdf-bijlagen naar
-`%LOCALAPPDATA%\HoekjeKantoor\mail-pdf\`; Betalen slaat incasso's, al betaalde en niet-herkende pdf's over en onthoudt
-verwerkte bijlagen (`verwerkt`). Zoekt vanzelf hooguit eens per uur bij het openen van Betalen.
-Voor concept-mails (ontbrekende facturen opvragen) is later `Mail.ReadWrite` nodig: opnieuw koppelen.
+## Nog te bouwen (stand 25-11-2026, in deze volgorde)
+1. **Transacties koppelen + concept-mails** (volgende stap): Rabobank-CSV slepen → per afschrijving de factuur in de
+   mailbox zoeken (factuurnummer uit omschrijving, bedrag, naam, datum) → overslaan met één klik (onthouden) →
+   ontbrekende facturen: concept-mail in Concepten aan het adres uit eerdere mails van die leverancier (anders één keer
+   invullen). Vereist opnieuw koppelen met `Mail.ReadWrite`. Nooit zelf versturen. Zoeken op internet: niet in v1.
+2. Facturenoverzicht met status per factuur (ontvangen, gesorteerd, in Dropbox, betaald, op afschrift) + controle tegen het afschrift.
+3. Teller op de €-knop voor facturen die deze week vervallen.
+4. Facturen archiveren in Dropbox per kwartaal.
+5. Klembord (wens 25-11): **brede balk bovenaan** met per item slepen, kopiëren, verwijderen en opslaan in Dropbox.
+6. Alle Windows-meldingen dempen zolang de app open is.
+7. Later/optioneel: koppeling met Exact Online; instellingen naar Supabase.
+Geparkeerd (25-11, "nog suboptimaal"): post-its en gekleurde tabs op het overzicht.
 
 Apart project, later: betaalverzoeken aan debiteuren uit de kassa (MplusKASSA) via WhatsApp met één betaallink.
